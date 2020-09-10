@@ -3,6 +3,9 @@ import yaml
 import anndata
 from typing import List, Dict, Iterable
 from pathlib import Path
+import numpy as np
+import scanpy as sc
+from os import walk
 
 def get_tissue_type(dataset: str, token: str) -> str:
     organ_dict = yaml.load(open('/opt/organ_types.yaml'), Loader=yaml.BaseLoader)
