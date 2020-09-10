@@ -27,9 +27,9 @@ setup(
     python_requires='>=3.6',
     entry_points={
         'console_scripts': [
-            'get_tissue_type=cross-dataset-common.cross_dataset_tools:get_tissue_type',
-            'get_gene_dicts=cross-dataset-common.cross_dataset_tools:get_gene_dicts',
-            'get_rows=cross-dataset-common.cross_dataset_tools:get_rows',
+            'get_tissue_type=cross_dataset_tools:get_tissue_type',
+            'get_gene_dicts=cross_dataset_tools:get_gene_dicts',
+            'get_rows=cross_dataset_tools:get_rows',
         ],
     },
 )
