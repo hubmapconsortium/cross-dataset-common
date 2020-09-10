@@ -6,7 +6,7 @@ setup(
     name='cross_dataset_common',
     version='0.1',
     description='Utilities for preparing processed data to be loaded into database',
-    url='https://github.com/hubmapconsortium/cross-modality-common',
+    url='https://github.com/hubmapconsortium/cross-dataset-common',
     author='Sean Donahue',
     author_email='seandona@andrew.cmu.edu',
     license='MIT',
@@ -25,11 +25,4 @@ setup(
         'pyyaml>=5.3',
     ],
     python_requires='>=3.6',
-    entry_points={
-        'console_scripts': [
-            'get_tissue_type=cross_dataset_tools:get_tissue_type',
-            'get_gene_dicts=cross_dataset_tools:get_gene_dicts',
-            'get_rows=cross_dataset_tools:get_rows',
-        ],
-    },
 )
