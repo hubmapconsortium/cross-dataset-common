@@ -1,7 +1,8 @@
 import requests
 import yaml
 import anndata
-from typing import List, Dict
+from typing import List, Dict, Iterable
+from pathlib import Path
 
 def get_tissue_type(dataset: str, token: str) -> str:
     organ_dict = yaml.load(open('/opt/organ_types.yaml'), Loader=yaml.BaseLoader)
