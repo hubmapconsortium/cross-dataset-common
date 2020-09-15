@@ -1,10 +1,8 @@
-from pathlib import Path
-
 from setuptools import setup, find_packages
 
 setup(
     name='cross_dataset_common',
-    version='0.1.2',
+    version='0.1.3',
     description='Utilities for preparing processed data to be loaded into database',
     url='https://github.com/hubmapconsortium/cross-dataset-common',
     author='Sean Donahue',

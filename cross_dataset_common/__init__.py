@@ -105,8 +105,8 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
 def get_rows(adata: anndata.AnnData, groupings: List[str]) -> List[Dict]:
     group_rows = []
 
-    cutoff = 0.9
-    marker_cutoff = .001
+    cutoff = 0.99
+    marker_cutoff = .01
 
     num_genes = len(adata.var_names)
 
@@ -131,6 +131,6 @@ def get_rows(adata: anndata.AnnData, groupings: List[str]) -> List[Dict]:
             marker_genes = [n_p[0] for n_p in names_and_pvals if n_p[1] < marker_cutoff]
 
             group_rows.append(
-                {'group_type': group_by, 'group_id': group_id, 'genes': genes, 'marker_genes': marker_genes})
+                {'group_type': group_by, 'group_id': str(group_id), 'genes': genes, 'marker_genes': marker_genes})
 
         return group_rows
