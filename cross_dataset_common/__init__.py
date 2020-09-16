@@ -133,4 +133,4 @@ def get_rows(adata: anndata.AnnData, groupings: List[str]) -> List[Dict]:
             group_rows.append(
                 {'group_type': group_by, 'group_id': str(group_id), 'genes': genes, 'marker_genes': marker_genes})
 
-        return group_rows
+    return group_rows
