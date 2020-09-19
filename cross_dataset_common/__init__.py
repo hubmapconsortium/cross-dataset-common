@@ -1,6 +1,7 @@
 import requests
 import yaml
 import anndata
+import pandas as pd
 from typing import List, Dict, Iterable
 from pathlib import Path
 from os import walk
@@ -134,3 +135,11 @@ def get_rows(adata: anndata.AnnData, groupings: List[str]) -> List[Dict]:
                 {'group_type': group_by, 'group_id': str(group_id), 'genes': genes, 'marker_genes': marker_genes})
 
     return group_rows
+
+def add_quant_columns(df: pd.DataFrame, adata: anndata.AnnData)-> pd.DataFrame:
+    """Takes a dataframe (adata.obs) and an anndata object, appends numeric data (adata.x) to the dataframe and returns"""
+    quant_df = adata.to_df()
+    for column in quant_df.columns:
+        if isinstance(quant_df[column].to_numpy()[0], float):
+            df[column] = pd.Series(quant_df[column].to_numpy())
+    return df.copy()
