@@ -131,8 +131,11 @@ def get_rows(adata: anndata.AnnData, groupings: List[str]) -> List[Dict]:
             genes = [n_p[0] for n_p in names_and_pvals if n_p[1] < cutoff]
             marker_genes = [n_p[0] for n_p in names_and_pvals if n_p[1] < marker_cutoff]
 
+            grouping_df = cell_df[cell_df[group_by] == group_id]
+            cells = grouping_df['cell_id'].unique()
+
             group_rows.append(
-                {'group_type': group_by, 'group_id': str(group_id), 'genes': genes, 'marker_genes': marker_genes})
+                {'group_type': group_by, 'group_id': str(group_id), 'cells':cells, 'genes': genes, 'marker_genes': marker_genes})
 
     return group_rows
 
