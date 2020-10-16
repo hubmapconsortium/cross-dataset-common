@@ -102,47 +102,25 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
             if filepath.match(pattern):
                 yield filepath
 
-
-def get_rows(adata: anndata.AnnData, groupings: List[str]) -> List[Dict]:
-    group_rows = []
-
-    cutoff = 0.99
-    marker_cutoff = .01
-
-    num_genes = len(adata.var_names)
+def get_pval_and_organ_dfs(adata: anndata.AnnData)->pd.DataFrame:
 
     cell_df = adata.obs.copy()
+    if 'cell_id' not in cell_df.columns:
+        cell_df['cell_id'] = cell_df.index
 
-    for group_by in groupings:
-        # for each thing we want to group by
+    pval_dict_list = []
+    organ_dict_list = []
 
-        sc.tl.rank_genes_groups(adata, group_by, method='t-test', rankby_abs=True, n_genes=num_genes)
+    for group_id in cell_df['tissue_type'].unique():
 
-        # get the group_ids and then the gene_names and scores for each
-        for group_id in cell_df[group_by].unique():
+        if type(group_id) == float and np.isnan(group_id):
+            continue
 
-            if type(group_id) == float and np.isnan(group_id):
-                continue
+        gene_names = adata.uns['rank_genes_groups']['names'][group_id]
+        pvals = adata.uns['rank_genes_groups']['pvals'][group_id]
+        names_and_pvals = zip(gene_names, pvals)
 
-            gene_names = adata.uns['rank_genes_groups']['names'][group_id]
-            pvals = adata.uns['rank_genes_groups']['pvals'][group_id]
-            names_and_pvals = zip(gene_names, pvals)
+        pval_dict_list.extend([{'organ_name': group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+        organ_dict_list.append({'organ_name': group_id, 'cells': list(cell_df[cell_df['group_id'] == group_id].copy()['cell_id'].unique())})
 
-            genes = [n_p[0] for n_p in names_and_pvals if n_p[1] < cutoff]
-            marker_genes = [n_p[0] for n_p in names_and_pvals if n_p[1] < marker_cutoff]
-
-            grouping_df = cell_df[cell_df[group_by] == group_id]
-            cells = grouping_df['cell_id'].unique()
-
-            group_rows.append(
-                {'group_type': group_by, 'group_id': str(group_id), 'cells':cells, 'genes': genes, 'marker_genes': marker_genes})
-
-    return group_rows
-
-def add_quant_columns(df: pd.DataFrame, adata: anndata.AnnData)-> pd.DataFrame:
-    """Takes a dataframe (adata.obs) and an anndata object, appends numeric data (adata.x) to the dataframe and returns"""
-    quant_df = adata.to_df()
-    for column in quant_df.columns:
-        if isinstance(quant_df[column].to_numpy()[0], float):
-            df[column] = pd.Series(quant_df[column].to_numpy())
-    return df.copy()
+    return pd.DataFrame(pval_dict_list), pd.DataFrame(organ_dict_list)
