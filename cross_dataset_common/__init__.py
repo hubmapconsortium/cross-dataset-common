@@ -104,6 +104,10 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
 
 def get_pval_and_organ_dfs(adata: anndata.AnnData)->pd.DataFrame:
 
+    num_genes = len(adata.var_names)
+
+    sc.tl.rank_genes_groups(adata, 'tissue_type', method='t-test', rankby_abs=True, n_genes=num_genes)
+
     cell_df = adata.obs.copy()
     if 'cell_id' not in cell_df.columns:
         cell_df['cell_id'] = cell_df.index
