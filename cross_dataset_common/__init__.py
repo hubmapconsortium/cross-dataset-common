@@ -125,6 +125,6 @@ def get_pval_and_organ_dfs(adata: anndata.AnnData)->pd.DataFrame:
         names_and_pvals = zip(gene_names, pvals)
 
         pval_dict_list.extend([{'organ_name': group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
-        organ_dict_list.append({'organ_name': group_id, 'cells': list(cell_df[cell_df['group_id'] == group_id].copy()['cell_id'].unique())})
+        organ_dict_list.append({'organ_name': group_id, 'cells': list(cell_df[cell_df['tissue_type'] == group_id].copy()['cell_id'].unique())})
 
     return pd.DataFrame(pval_dict_list), pd.DataFrame(organ_dict_list)
