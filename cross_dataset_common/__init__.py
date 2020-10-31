@@ -7,7 +7,30 @@ from pathlib import Path
 from os import walk
 import scanpy as sc
 import numpy as np
+import concurrent.futures
 
+def process_quant_column(quant_df_and_column):
+    quant_df = quant_df_and_column[0]
+    column = quant_df_and_column[1]
+
+    dict_list =  [{'cell_id': i, 'gene_id': column, 'value': quant_df.at[i, column]} for i in
+                 quant_df.index]
+
+    return pd.DataFrame(dict_list)
+
+
+def flatten_quant_df(quant_df:pd.DataFrame):
+
+    dict_list = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
+
+        df_and_columns = [(quant_df, column) for column in quant_df.columns]
+
+        for column_list in executor.map(process_quant_column, df_and_columns):
+            dict_list.extend(column_list)
+
+    return dict_list
 
 def get_tissue_type(dataset: str, token: str) -> str:
     organ_dict = yaml.load(open('/opt/organ_types.yaml'), Loader=yaml.BaseLoader)
@@ -102,7 +125,7 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
             if filepath.match(pattern):
                 yield filepath
 
-def get_pval_and_organ_dfs(adata: anndata.AnnData)->pd.DataFrame:
+def get_pval_dfs(adata: anndata.AnnData)->pd.DataFrame:
 
     num_genes = len(adata.var_names)
 
@@ -113,7 +136,6 @@ def get_pval_and_organ_dfs(adata: anndata.AnnData)->pd.DataFrame:
         cell_df['cell_id'] = cell_df.index
 
     pval_dict_list = []
-    organ_dict_list = []
 
     for group_id in cell_df['tissue_type'].unique():
 
@@ -125,6 +147,5 @@ def get_pval_and_organ_dfs(adata: anndata.AnnData)->pd.DataFrame:
         names_and_pvals = zip(gene_names, pvals)
 
         pval_dict_list.extend([{'organ_name': group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
-        organ_dict_list.append({'organ_name': group_id, 'cells': list(cell_df[cell_df['tissue_type'] == group_id].copy()['cell_id'].unique())})
 
-    return pd.DataFrame(pval_dict_list), pd.DataFrame(organ_dict_list)
+    return pd.DataFrame(pval_dict_list)
