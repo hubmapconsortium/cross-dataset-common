@@ -16,7 +16,7 @@ def process_quant_column(quant_df_and_column):
     dict_list =  [{'cell_id': i, 'gene_id': column, 'value': quant_df.at[i, column]} for i in
                  quant_df.index]
 
-    return pd.DataFrame(dict_list)
+    return dict_list
 
 
 def flatten_quant_df(quant_df:pd.DataFrame):
@@ -30,7 +30,7 @@ def flatten_quant_df(quant_df:pd.DataFrame):
         for column_list in executor.map(process_quant_column, df_and_columns):
             dict_list.extend(column_list)
 
-    return dict_list
+    return pd.DataFrame(dict_list)
 
 def get_tissue_type(dataset: str, token: str) -> str:
     organ_dict = yaml.load(open('/opt/organ_types.yaml'), Loader=yaml.BaseLoader)
