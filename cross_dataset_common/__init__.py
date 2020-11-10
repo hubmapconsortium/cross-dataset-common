@@ -8,16 +8,38 @@ from os import walk
 import scanpy as sc
 import numpy as np
 import concurrent.futures
+from scipy.sparse import coo_matrix
+
+
+def make_quant_csv(adata: anndata.AnnData, modality:str):
+
+    genes = list(adata.var.index)
+    cells = list(adata.obs.index)
+    coo = coo_matrix(adata.X)
+
+    triples = [(coo.row[i], coo.col[i], coo.data[i]) for i in range(len(coo.row))]
+
+    dict_list = [{'q_cell_id':cells[row], 'q_gene_id':genes[col], 'value':val} for row, col, val in triples]
+    quant_df = pd.DataFrame(dict_list)
+    quant_df.to_csv(modality + '.csv')
+
 
 def process_quant_column(quant_df_and_column):
     quant_df = quant_df_and_column[0]
     column = quant_df_and_column[1]
 
     dict_list =  [{'cell_id': i, 'gene_id': column, 'value': quant_df.at[i, column]} for i in
-                 quant_df.index]
+                 quant_df.index if quant_df.at[i, column] > 0.0]
 
     return dict_list
 
+def get_zero_cells_column(quant_df_and_column):
+    quant_df = quant_df_and_column[0]
+    column = quant_df_and_column[1]
+
+    zero_cells = [i for i in quant_df.index if quant_df.at[i, column] > 0.0]
+
+    return zero_cells
 
 def flatten_quant_df(quant_df:pd.DataFrame):
 
@@ -31,6 +53,14 @@ def flatten_quant_df(quant_df:pd.DataFrame):
             dict_list.extend(column_list)
 
     return pd.DataFrame(dict_list)
+
+def get_zero_cells(quant_df:pd.DataFrame):
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
+        df_and_columns = [(quant_df, column) for column in quant_df.columns]
+        zero_cells = {column: cell_list for column, cell_list in zip(quant_df.columns, executor.map(get_zero_cells_column, df_and_columns))}
+
+    return zero_cells
 
 def get_tissue_type(dataset: str, token: str) -> str:
     organ_dict = yaml.load(open('/opt/organ_types.yaml'), Loader=yaml.BaseLoader)
