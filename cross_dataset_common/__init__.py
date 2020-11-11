@@ -63,6 +63,14 @@ def get_zero_cells(quant_df:pd.DataFrame):
     return zero_cells
 
 def get_tissue_type(dataset: str, token: str) -> str:
+
+    special_cases = {'ucsd_snareseq':'Kidney', 'caltech_sciseq':'Heart'}
+
+    #Hacky handling of datasets not yet exposed to search-api
+    if dataset in special_cases.keys():
+        return special_cases[dataset]
+
+
     organ_dict = yaml.load(open('/opt/organ_types.yaml'), Loader=yaml.BaseLoader)
 
     dataset_query_dict = {
