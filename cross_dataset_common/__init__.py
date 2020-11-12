@@ -165,25 +165,35 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
 
 def get_pval_dfs(adata: anndata.AnnData)->pd.DataFrame:
 
+    groupings_dict = {'tissue_type':'organ_name', 'leiden':'cluster', 'dataset':'uuid'}
+
     num_genes = len(adata.var_names)
 
-    sc.tl.rank_genes_groups(adata, 'tissue_type', method='t-test', rankby_abs=True, n_genes=num_genes)
+    data_frames = []
 
-    cell_df = adata.obs.copy()
-    if 'cell_id' not in cell_df.columns:
-        cell_df['cell_id'] = cell_df.index
+    for grouping in groupings_dict:
 
-    pval_dict_list = []
+        sc.tl.rank_genes_groups(adata, grouping, method='t-test', rankby_abs=True, n_genes=num_genes)
 
-    for group_id in cell_df['tissue_type'].unique():
+        cell_df = adata.obs.copy()
+        if 'cell_id' not in cell_df.columns:
+            cell_df['cell_id'] = cell_df.index
 
-        if type(group_id) == float and np.isnan(group_id):
-            continue
+        pval_dict_list = []
 
-        gene_names = adata.uns['rank_genes_groups']['names'][group_id]
-        pvals = adata.uns['rank_genes_groups']['pvals'][group_id]
-        names_and_pvals = zip(gene_names, pvals)
+        group_descriptor = groupings_dict[grouping]
 
-        pval_dict_list.extend([{'organ_name': group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+        for group_id in cell_df[grouping].unique():
 
-    return pd.DataFrame(pval_dict_list)
+            if type(group_id) == float and np.isnan(group_id):
+                continue
+
+            gene_names = adata.uns['rank_genes_groups']['names'][group_id]
+            pvals = adata.uns['rank_genes_groups']['pvals'][group_id]
+            names_and_pvals = zip(gene_names, pvals)
+
+            pval_dict_list.extend([{group_descriptor: group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+
+        data_frames.append(pd.DataFrame(pval_dict_list))
+
+    return data_frames
