@@ -165,7 +165,7 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
 
 def get_pval_dfs(adata: anndata.AnnData)->pd.DataFrame:
 
-    groupings_dict = {'tissue_type':'organ_name', 'leiden':'cluster', 'dataset':'uuid'}
+    groupings_dict = {'tissue_type':'organ_name', 'leiden':'cluster'}
 
     num_genes = len(adata.var_names)
 
