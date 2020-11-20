@@ -118,7 +118,17 @@ def get_tissue_type(dataset: str, token: str) -> str:
     for hit in hits:
         for ancestor in hit['_source']['ancestors']:
             if 'organ' in ancestor.keys():
-                return organ_dict[ancestor['organ']]['description']
+                raw_organ_name = organ_dict[ancestor['organ']]['description']
+                if 'Kidney' in raw_organ_name:
+                    return 'Kidney'
+                elif 'Bronchus' in raw_organ_name:
+                    return 'Bronchus'
+                elif 'Lung' in raw_organ_name:
+                    return 'Lung'
+                elif 'Lymph' in raw_organ_name:
+                    return 'Lymph Node'
+                else:
+                    return raw_organ_name
 
 
 def get_gene_response(ensembl_ids: List[str]):
