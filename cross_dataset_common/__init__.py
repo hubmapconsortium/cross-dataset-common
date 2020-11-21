@@ -8,8 +8,12 @@ from os import walk
 import scanpy as sc
 import numpy as np
 import concurrent.futures
+import hashlib
 from scipy.sparse import coo_matrix
 
+def hash_cell_id(semantic_cell_ids: pd.Series):
+    hash_list = [hashlib.sha256(semantic_cell_id).hexdigest() for semantic_cell_id in semantic_cell_ids]
+    return pd.Series(hash_list)
 
 def make_quant_csv(adata: anndata.AnnData, modality:str):
 
