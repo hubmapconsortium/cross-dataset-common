@@ -12,7 +12,7 @@ import hashlib
 from scipy.sparse import coo_matrix
 
 def hash_cell_id(semantic_cell_ids: pd.Series):
-    hash_list = [hashlib.sha256(semantic_cell_id).hexdigest() for semantic_cell_id in semantic_cell_ids]
+    hash_list = [hashlib.sha256(semantic_cell_id.encode('UTF-8')).hexdigest().decode('UTF-8') for semantic_cell_id in semantic_cell_ids]
     return pd.Series(hash_list)
 
 def make_quant_csv(adata: anndata.AnnData, modality:str):
@@ -231,24 +231,22 @@ def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
 
     return pd.DataFrame(pval_dict_list)
 
-def make_mini_cell_df(file):
-    with pd.HDFStore(file) as store:
-        cell_df = store.get("cell")
-        mini_cell_df = cell_df.head(1000).copy()
-        if "cell_id" not in mini_cell_df.columns:
-            mini_cell_df["cell_id"] = mini_cell_df.index
-        cell_ids = list(mini_cell_df["cell_id"].unique())
+def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 
-    new_file = "mini_" + file.stem + ".hdf5"
+    mini_cell_df = cell_df.head(1000).copy()
+    if "cell_id" not in mini_cell_df.columns:
+        mini_cell_df["cell_id"] = mini_cell_df.index
+    cell_ids = list(mini_cell_df["cell_id"].unique())
+
+    new_file = "mini_" + modality + ".hdf5"
     with pd.HDFStore(new_file) as store:
         store.put("cell", mini_cell_df)
     return cell_ids
 
 
-def make_mini_quant_df(file, cell_ids):
+def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
 
-    csv_file = file.stem + '.csv'
-    quant_df = pd.read_csv(csv_file)
+    csv_file = modality + '.csv'
     genes = list(quant_df['gene_id'].unique())[:1000]
     quant_df.set_index('gene_id', inplace=True, drop=False)
     quant_df = quant_df[genes]
@@ -260,26 +258,24 @@ def make_mini_quant_df(file, cell_ids):
     return genes
 
 
-def make_mini_pval_dfs(file, gene_ids):
+def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
+    new_file = "mini_" + modality + ".hdf5"
 
-    for key in ['organ', 'cluster']:
-        with pd.HDFStore(file) as store:
-            pval_df = store.get(key)
-            pval_df = pval_df.set_index("gene_id", drop=False)
-            filtered_pval_df = pval_df.loc[gene_ids]
+    for i, pval_df in enumerate(pval_dfs):
+        pval_df = pval_df.set_index("gene_id", drop=False)
+        filtered_pval_df = pval_df.loc[gene_ids]
 
-        new_file = "mini_" + file.stem + ".hdf5"
         with pd.HDFStore(new_file) as store:
-            store.put("key", filtered_pval_df)
+            store.put(keys[i], filtered_pval_df)
 
     return
 
 
-def create_minimal_dataset(hdf_file: Path):
+def create_minimal_dataset(cell_df, quant_df, organ_df, cluster_df, modality):
 
-    cell_ids = make_mini_cell_df(file)
-    if hdf_file.stem in ["atac", "rna"]:
-        gene_ids = make_mini_quant_df(hdf_file, cell_ids)
-        make_mini_pval_dfs(hdf_file, gene_ids)
+    cell_ids = make_mini_cell_df(cell_df, modality)
+    gene_ids = make_mini_quant_df(quant_df, cell_ids)
+    if modality in ["atac", "rna"]:
+        make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
 
 
