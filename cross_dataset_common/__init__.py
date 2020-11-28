@@ -266,6 +266,7 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
     new_file = "mini_" + modality + ".hdf5"
 
     for i, pval_df in enumerate(pval_dfs):
+        print(pval_df.columns)
         pval_df = pval_df.set_index("gene_id", drop=False)
         filtered_pval_df = pval_df.loc[gene_ids]
 
