@@ -214,6 +214,9 @@ def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
 
         data_frames.append(pd.DataFrame(pval_dict_list))
 
+    for df in data_frames:
+        print(df.columns)
+
     return data_frames
 
 def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
@@ -267,6 +270,7 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
 
     for i, pval_df in enumerate(pval_dfs):
         print(pval_df.columns)
+        print(pval_df.index)
         pval_df = pval_df.set_index("gene_id", drop=False)
         filtered_pval_df = pval_df.loc[gene_ids]
 
