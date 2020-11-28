@@ -247,6 +247,7 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
         mini_cell_df["cell_id"] = mini_cell_df.index
     cell_ids = list(mini_cell_df["cell_id"].unique())
 
+    print(mini_cell_df['cell_id'])
     print(mini_cell_df.index)
     print(cell_ids)
 
