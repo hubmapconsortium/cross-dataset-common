@@ -253,6 +253,9 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 
 def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
 
+    print('quant_df')
+    print(quant_df.columns)
+    print(quant_df.index)
     csv_file = modality + '.csv'
     genes = list(quant_df['gene_id'].unique())[:1000]
     quant_df.set_index('gene_id', inplace=True, drop=False)
