@@ -67,7 +67,9 @@ def get_zero_cells(quant_df:pd.DataFrame):
 
 def get_tissue_type(dataset: str, token: str) -> str:
 
-    special_cases = {'ucsd_snareseq':'Kidney', 'caltech_sciseq':'Heart'}
+    print(dataset)
+
+    special_cases = {'ucsd-snareseq':'Kidney', 'caltech-sciseq':'Heart'}
 
     #Hacky handling of datasets not yet exposed to search-api
     if dataset in special_cases.keys():
