@@ -240,10 +240,15 @@ def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
 
 def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 
+    print(cell_df.index)
+
     mini_cell_df = cell_df.head(1000).copy()
     if "cell_id" not in mini_cell_df.columns:
         mini_cell_df["cell_id"] = mini_cell_df.index
     cell_ids = list(mini_cell_df["cell_id"].unique())
+
+    print(mini_cell_df.index)
+    print(cell_ids)
 
     new_file = "mini_" + modality + ".hdf5"
     with pd.HDFStore(new_file) as store:
@@ -288,6 +293,7 @@ def create_minimal_dataset(cell_df, quant_df, organ_df, cluster_df, modality):
     print(organ_df.columns)
     print(cluster_df.columns)
     cell_ids = make_mini_cell_df(cell_df, modality)
+    print(cell_ids)
     gene_ids = make_mini_quant_df(quant_df, modality, cell_ids)
     if modality in ["atac", "rna"]:
         make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
