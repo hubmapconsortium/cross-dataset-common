@@ -282,6 +282,8 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
 
 def create_minimal_dataset(cell_df, quant_df, organ_df, cluster_df, modality):
 
+    print(organ_df.columns)
+    print(cluster_df.columns)
     cell_ids = make_mini_cell_df(cell_df, modality)
     gene_ids = make_mini_quant_df(quant_df, modality, cell_ids)
     if modality in ["atac", "rna"]:
