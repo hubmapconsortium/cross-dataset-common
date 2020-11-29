@@ -240,15 +240,19 @@ def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
 
 def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 
+    print('Original df index')
     print(cell_df.index)
 
     mini_cell_df = cell_df.head(1000).copy()
     if "cell_id" not in mini_cell_df.columns:
         mini_cell_df["cell_id"] = mini_cell_df.index
-    cell_ids = mini_cell_df["cell_id"].to_list()
+    cell_ids = mini_cell_df["cell_id"].astype(str).to_list()
 
-    print(mini_cell_df['cell_id'])
+    print('Mini df index')
     print(mini_cell_df.index)
+    print('Mini df cell_ids')
+    print(mini_cell_df['cell_id'])
+    print('Cell id list')
     print(cell_ids)
 
     new_file = "mini_" + modality + ".hdf5"
