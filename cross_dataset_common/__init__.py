@@ -245,7 +245,7 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
     mini_cell_df = cell_df.head(1000).copy()
     if "cell_id" not in mini_cell_df.columns:
         mini_cell_df["cell_id"] = mini_cell_df.index
-    cell_ids = list(mini_cell_df["cell_id"].unique())
+    cell_ids = mini_cell_df["cell_id"].to_list()
 
     print(mini_cell_df['cell_id'])
     print(mini_cell_df.index)
@@ -259,9 +259,6 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 
 def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
 
-    print('quant_df')
-    print(quant_df.columns)
-    print(quant_df.index)
     csv_file = modality + '.csv'
     genes = list(quant_df['q_gene_id'].unique())[:1000]
     quant_df.set_index('q_gene_id', inplace=True, drop=False)
@@ -278,8 +275,6 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
     new_file = "mini_" + modality + ".hdf5"
 
     for i, pval_df in enumerate(pval_dfs):
-        print(pval_df.columns)
-        print(pval_df.index)
         pval_df = pval_df.set_index("gene_id", drop=False)
         filtered_pval_df = pval_df.loc[gene_ids]
 
@@ -291,8 +286,6 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
 
 def create_minimal_dataset(cell_df, quant_df, organ_df, cluster_df, modality):
 
-    print(organ_df.columns)
-    print(cluster_df.columns)
     cell_ids = make_mini_cell_df(cell_df, modality)
     print(cell_ids)
     gene_ids = make_mini_quant_df(quant_df, modality, cell_ids)
