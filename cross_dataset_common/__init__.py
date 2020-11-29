@@ -246,7 +246,7 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
     mini_cell_df = cell_df.head(1000).copy()
     if "cell_id" not in mini_cell_df.columns:
         mini_cell_df["cell_id"] = mini_cell_df.index
-    cell_ids = mini_cell_df["cell_id"].astype(str).to_list()
+    cell_ids = mini_cell_df.index.to_list()
 
     print('Mini df index')
     print(mini_cell_df.index)
