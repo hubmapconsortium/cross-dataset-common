@@ -17,13 +17,15 @@ def hash_cell_id(semantic_cell_ids: pd.Series):
 
 def make_quant_df(adata: anndata.AnnData):
 
+    adata.obs = adata.obs.set_index('cell_id', drop=False, inplace=False)
+
     genes = list(adata.var.index)
     cells = list(adata.obs.index)
     coo = coo_matrix(adata.X)
 
     triples = [(coo.row[i], coo.col[i], coo.data[i]) for i in range(len(coo.row))]
 
-    dict_list = [{'q_cell_id':cells[row], 'q_gene_id':genes[col], 'value':val} for row, col, val in triples]
+    dict_list = [{'q_cell_id':cells[row], 'q_var_id':genes[col], 'value':val} for row, col, val in triples]
     quant_df = pd.DataFrame(dict_list)
     return quant_df
 
@@ -264,11 +266,13 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
 
     csv_file = modality + '.csv'
-    genes = list(quant_df['q_gene_id'].unique())[:1000]
-    quant_df.set_index('q_gene_id', inplace=True, drop=False)
+    genes = list(quant_df['q_var_id'].unique())[:1000]
+    quant_df.set_index('q_var_id', inplace=True, drop=False)
     quant_df = quant_df.loc[genes]
     quant_df.set_index('q_cell_id', inplace=True, drop=False)
     quant_df = quant_df.loc[cell_ids]
+    quant_df = quant_df.reset_index(drop=True)
+    print(quant_df.columns)
 
     quant_df.to_csv('mini_' + csv_file)
 
