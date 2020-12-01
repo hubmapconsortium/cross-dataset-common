@@ -4,12 +4,6 @@ import anndata
 import pandas as pd
 from typing import List, Dict, Iterable
 from pathlib import Path
-<<<<<<< HEAD
-import numpy as np
-import scanpy as sc
-from os import walk
-
-=======
 from os import walk
 import scanpy as sc
 import numpy as np
@@ -70,7 +64,6 @@ def get_zero_cells(quant_df:pd.DataFrame):
         zero_cells = {column: cell_list for column, cell_list in zip(quant_df.columns, executor.map(get_zero_cells_column, df_and_columns))}
 
     return zero_cells
->>>>>>> a7c1431062d79f1a791b1341f6e28146ab3134f9
 
 def get_tissue_type(dataset: str, token: str) -> str:
 
@@ -185,13 +178,7 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
             if filepath.match(pattern):
                 yield filepath
 
-<<<<<<< HEAD
-
-def get_rows(adata: anndata.AnnData, groupings: List[str]) -> List[Dict]:
-    group_rows = []
-=======
 def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
->>>>>>> a7c1431062d79f1a791b1341f6e28146ab3134f9
 
     groupings_dict = {'tissue_type':'organ_name', 'leiden':'cluster'}
 
@@ -310,5 +297,3 @@ def create_minimal_dataset(cell_df, quant_df, organ_df, cluster_df, modality):
     gene_ids = make_mini_quant_df(quant_df, modality, cell_ids)
     if modality in ["atac", "rna"]:
         make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
-
-
