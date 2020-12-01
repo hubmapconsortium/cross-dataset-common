@@ -282,6 +282,8 @@ def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
     quant_df = quant_df.loc[genes]
     quant_df.set_index('q_cell_id', inplace=True, drop=False)
     quant_df = quant_df.loc[cell_ids]
+    quant_df = quant_df.reset_index(drop=True, inplace=False)
+    print(quant_df.columns)
 
     quant_df.to_csv('mini_' + csv_file)
 
