@@ -7,6 +7,7 @@ import numpy as np
 import scanpy as sc
 from os import walk
 
+
 def get_tissue_type(dataset: str, token: str) -> str:
     organ_dict = yaml.load(open('/opt/organ_types.yaml'), Loader=yaml.BaseLoader)
 
@@ -91,13 +92,15 @@ def get_gene_dicts(ensembl_ids: List[str]) -> (Dict, Dict):
 
     return forwards_dict, backwards_dict
 
-def find_files(directory: Path, pattern:str) -> Iterable[Path]:
+
+def find_files(directory: Path, pattern: str) -> Iterable[Path]:
     for dirpath_str, dirnames, filenames in walk(directory):
         dirpath = Path(dirpath_str)
         for filename in filenames:
             filepath = dirpath / filename
             if filepath.match(pattern):
                 yield filepath
+
 
 def get_rows(adata: anndata.AnnData, groupings: List[str]) -> List[Dict]:
     group_rows = []
