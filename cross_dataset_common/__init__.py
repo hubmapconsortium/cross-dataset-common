@@ -269,9 +269,10 @@ def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
     genes = list(quant_df['q_gene_id'].unique())[:1000]
     quant_df.set_index('q_gene_id', inplace=True, drop=False)
     quant_df = quant_df.loc[genes]
-    print(quant_df['q_cell_id'])
+    cell_ids = [cell_id for cell_id in cell_ids if cell_id in quant_df['q_cell_id'].unique()]
+    print('cell ids')
+    print(cell_ids)
     quant_df.set_index('q_cell_id', inplace=True, drop=False)
-    print(quant_df.index)
     quant_df = quant_df.loc[cell_ids]
     quant_df = quant_df.reset_index(drop=True, inplace=False)
     print(quant_df.columns)
