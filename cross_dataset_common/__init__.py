@@ -17,6 +17,8 @@ def hash_cell_id(semantic_cell_ids: pd.Series):
 
 def make_quant_df(adata: anndata.AnnData):
 
+    adata.obs.index = adata.obs['cell_id']
+
     genes = list(adata.var.index)
     cells = list(adata.obs.index)
     coo = coo_matrix(adata.X)
