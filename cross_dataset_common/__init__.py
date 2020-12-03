@@ -267,15 +267,9 @@ def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
 
     csv_file = modality + '.csv'
     genes = list(quant_df['q_gene_id'].unique())[:1000]
-    quant_df.set_index('q_gene_id', inplace=True, drop=False)
-    quant_df = quant_df.loc[genes]
-    cell_ids = [cell_id for cell_id in cell_ids if cell_id in quant_df['q_cell_id'].unique()]
-    print('cell ids')
-    print(cell_ids)
-    quant_df.set_index('q_cell_id', inplace=True, drop=False)
-    quant_df = quant_df.loc[cell_ids]
-    quant_df = quant_df.reset_index(drop=True, inplace=False)
-    print(quant_df.columns)
+
+    quant_df = quant_df[quant_df['q_gene_id'].isin(genes)]
+    quant_df = quant_df[quant_df['q_cell_id'].isin(cell_ids)]
 
     quant_df.to_csv('mini_' + csv_file)
 
