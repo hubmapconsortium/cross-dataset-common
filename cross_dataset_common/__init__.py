@@ -266,10 +266,11 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
 
     csv_file = modality + '.csv'
+    quant_df = quant_df[quant_df['q_cell_id'].isin(cell_ids)]
+
     genes = list(quant_df['q_gene_id'].unique())[:1000]
 
     quant_df = quant_df[quant_df['q_gene_id'].isin(genes)]
-    quant_df = quant_df[quant_df['q_cell_id'].isin(cell_ids)]
 
     quant_df.to_csv('mini_' + csv_file)
 
