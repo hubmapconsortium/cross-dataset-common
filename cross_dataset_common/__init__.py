@@ -180,7 +180,7 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
             if filepath.match(pattern):
                 yield filepath
 
-def get_pval_dfs(adata: anndata.AnnData, adj:bool=False)->List[pd.DataFrame]:
+def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
 
     groupings_dict = {'tissue_type':'organ_name', 'leiden':'cluster'}
 
@@ -209,10 +209,9 @@ def get_pval_dfs(adata: anndata.AnnData, adj:bool=False)->List[pd.DataFrame]:
                 continue
 
             gene_names = adata.uns['rank_genes_groups']['names'][group_id]
-            if adj:
-                pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
-            else:
-                pvals = adata.uns['rank_genes_groups']['pvals'][group_id]
+
+            pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
+
             names_and_pvals = zip(gene_names, pvals)
 
             pval_dict_list.extend([{group_descriptor: group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
@@ -224,7 +223,7 @@ def get_pval_dfs(adata: anndata.AnnData, adj:bool=False)->List[pd.DataFrame]:
 
     return data_frames
 
-def get_cluster_df(adata:anndata.AnnData, adj:bool=False)->pd.DataFrame:
+def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
     cell_df = adata.obs.copy()
     dataset = cell_df['dataset'][0]
 
@@ -237,10 +236,7 @@ def get_cluster_df(adata:anndata.AnnData, adj:bool=False)->pd.DataFrame:
 
         gene_names = adata.uns['rank_genes_groups']['names'][group_id]
 
-        if adj:
-            pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
-        else:
-            pvals = adata.uns['rank_genes_groups']['pvals'][group_id]
+        pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
 
         names_and_pvals = zip(gene_names, pvals)
 
