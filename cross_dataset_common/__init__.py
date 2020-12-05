@@ -249,7 +249,7 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
     mini_cell_df = cell_df.head(1000).copy()
     if "cell_id" not in mini_cell_df.columns:
         mini_cell_df["cell_id"] = mini_cell_df.index
-    cell_ids = mini_cell_df.index.to_list()
+    cell_ids = mini_cell_df["cell_id"].to_list()
 
     new_file = "mini_" + modality + ".hdf5"
     with pd.HDFStore(new_file) as store:
@@ -259,24 +259,15 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 
 def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
 
-    print('Original quant df index')
-    print(len(quant_df.index))
-
     csv_file = modality + '.csv'
     quant_df = quant_df[quant_df['q_cell_id'].isin(cell_ids)]
 
-    print('Quant df index selected for cells')
-    print(len(quant_df.index))
-
     genes = list(quant_df['q_gene_id'].unique())[:1000]
 
-    print('Genes')
-    print(len(genes))
+    gene_filter = quant_df['q_gene_id'].isin(genes)
+    print(gene_filter.value_counts())
 
-    quant_df = quant_df[quant_df['q_gene_id'].isin(genes)]
-
-    print('Quant df index selected for cells and genes')
-    print(len(quant_df.index))
+    quant_df = quant_df[gene_filter]
 
     quant_df.to_csv('mini_' + csv_file)
 
