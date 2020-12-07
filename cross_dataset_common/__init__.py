@@ -13,11 +13,19 @@ from scipy.sparse import coo_matrix
 
 def hash_cell_id(semantic_cell_ids: pd.Series):
     hash_list = [hashlib.sha256(semantic_cell_id.encode('UTF-8')).hexdigest() for semantic_cell_id in semantic_cell_ids]
+<<<<<<< HEAD
     return pd.Series(hash_list, index=semantic_cell_ids.index)
 
 def make_quant_df(adata: anndata.AnnData):
 
     adata.obs = adata.obs.set_index('cell_id', drop=False, inplace=False)
+=======
+    hash_list
+
+def make_quant_df(adata: anndata.AnnData):
+
+    adata.obs.index = adata.obs['cell_id']
+>>>>>>> 7c6060b2dce0f933c08169e6793235c0066ea443
 
     genes = list(adata.var.index)
     cells = list(adata.obs.index)
@@ -210,10 +218,9 @@ def get_pval_dfs(adata: anndata.AnnData, adj:bool=False, modality:str)->List[pd.
                 continue
 
             gene_names = adata.uns['rank_genes_groups']['names'][group_id]
-            if adj:
-                pvals = adata.uns['rank_genes_groups']['pvals_adj']
-            else:
-                pvals = adata.uns['rank_genes_groups']['pvals'][group_id]
+
+            pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
+
             names_and_pvals = zip(gene_names, pvals)
 
             if grouping == 'organ':
@@ -228,7 +235,7 @@ def get_pval_dfs(adata: anndata.AnnData, adj:bool=False, modality:str)->List[pd.
 
     return data_frames
 
-def get_cluster_df(adata:anndata.AnnData, adj:bool=False)->pd.DataFrame:
+def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
     cell_df = adata.obs.copy()
     dataset = cell_df['dataset'][0]
 
@@ -240,10 +247,8 @@ def get_cluster_df(adata:anndata.AnnData, adj:bool=False)->pd.DataFrame:
             continue
 
         gene_names = adata.uns['rank_genes_groups']['names'][group_id]
-        if adj:
-            pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
-        else:
-            pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
+
+        pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
 
         names_and_pvals = zip(gene_names, pvals)
 
@@ -253,20 +258,10 @@ def get_cluster_df(adata:anndata.AnnData, adj:bool=False)->pd.DataFrame:
 
 def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 
-    print('Original df index')
-    print(cell_df.index)
-
     mini_cell_df = cell_df.head(1000).copy()
     if "cell_id" not in mini_cell_df.columns:
         mini_cell_df["cell_id"] = mini_cell_df.index
-    cell_ids = mini_cell_df.index.to_list()
-
-    print('Mini df index')
-    print(mini_cell_df.index)
-    print('Mini df cell_ids')
-    print(mini_cell_df['cell_id'])
-    print('Cell id list')
-    print(cell_ids)
+    cell_ids = mini_cell_df["cell_id"].to_list()
 
     new_file = "mini_" + modality + ".hdf5"
     with pd.HDFStore(new_file) as store:
@@ -277,14 +272,16 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
 
     csv_file = modality + '.csv'
-    genes = list(quant_df['q_var_id'].unique())[:1000]
-    quant_df.set_index('q_var_id', inplace=True, drop=False)
-    quant_df = quant_df.loc[genes]
-    print(quant_df['q_cell_id'].unique())
-    quant_df.set_index('q_cell_id', inplace=True, drop=False)
-    quant_df = quant_df.loc[cell_ids]
-    quant_df = quant_df.reset_index(drop=True)
-    print(quant_df.columns)
+    quant_df = quant_df[quant_df['q_cell_id'].isin(cell_ids)]
+
+    genes = list(quant_df['q_gene_id'].unique())[:1000]
+
+    gene_filter = quant_df['q_gene_id'].isin(genes)
+    print(gene_filter.value_counts())
+
+    quant_df = quant_df[gene_filter]
+
+    quant_df.to_csv('mini_' + csv_file)
 
     return genes
 

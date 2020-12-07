@@ -21,6 +21,7 @@ setup(
         'anndata>=0.7.3',
         'requests>=2.22.0',
         'pyyaml>=5.3',
+        'scanpy>=1.4.4',
     ],
     python_requires='>=3.6',
 )
