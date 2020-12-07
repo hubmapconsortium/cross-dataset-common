@@ -13,7 +13,7 @@ from scipy.sparse import coo_matrix
 
 def hash_cell_id(semantic_cell_ids: pd.Series):
     hash_list = [hashlib.sha256(semantic_cell_id.encode('UTF-8')).hexdigest() for semantic_cell_id in semantic_cell_ids]
-    return pd.Series(hash_list)
+    return pd.Series(hash_list, index=semantic_cell_ids.index)
 
 def make_quant_df(adata: anndata.AnnData):
 
@@ -180,7 +180,8 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
             if filepath.match(pattern):
                 yield filepath
 
-def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
+
+def get_pval_dfs(adata: anndata.AnnData, adj:bool=False, modality:str)->List[pd.DataFrame]:
 
     groupings_dict = {'tissue_type':'organ_name', 'leiden':'cluster'}
 
@@ -209,10 +210,16 @@ def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
                 continue
 
             gene_names = adata.uns['rank_genes_groups']['names'][group_id]
-            pvals = adata.uns['rank_genes_groups']['pvals'][group_id]
+            if adj:
+                pvals = adata.uns['rank_genes_groups']['pvals_adj']
+            else:
+                pvals = adata.uns['rank_genes_groups']['pvals'][group_id]
             names_and_pvals = zip(gene_names, pvals)
 
-            pval_dict_list.extend([{group_descriptor: group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+            if grouping == 'organ':
+                pval_dict_list.extend([{group_descriptor: group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+            elif grouping == 'leiden':
+                pval_dict_list.extend([{group_descriptor: group_id, 'dataset': 'all_rna', 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
 
         data_frames.append(pd.DataFrame(pval_dict_list))
 
@@ -221,7 +228,7 @@ def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
 
     return data_frames
 
-def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
+def get_cluster_df(adata:anndata.AnnData, adj:bool=False)->pd.DataFrame:
     cell_df = adata.obs.copy()
     dataset = cell_df['dataset'][0]
 
@@ -233,10 +240,14 @@ def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
             continue
 
         gene_names = adata.uns['rank_genes_groups']['names'][group_id]
-        pvals = adata.uns['rank_genes_groups']['pvals'][group_id]
+        if adj:
+            pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
+        else:
+            pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
+
         names_and_pvals = zip(gene_names, pvals)
 
-        pval_dict_list.extend([{'leiden': group_id, 'dataset':dataset, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+        pval_dict_list.extend([{'cluster': group_id, 'dataset':dataset, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
 
     return pd.DataFrame(pval_dict_list)
 
@@ -269,12 +280,11 @@ def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
     genes = list(quant_df['q_var_id'].unique())[:1000]
     quant_df.set_index('q_var_id', inplace=True, drop=False)
     quant_df = quant_df.loc[genes]
+    print(quant_df['q_cell_id'].unique())
     quant_df.set_index('q_cell_id', inplace=True, drop=False)
     quant_df = quant_df.loc[cell_ids]
     quant_df = quant_df.reset_index(drop=True)
     print(quant_df.columns)
-
-    quant_df.to_csv('mini_' + csv_file)
 
     return genes
 
@@ -299,5 +309,3 @@ def create_minimal_dataset(cell_df, quant_df, organ_df, cluster_df, modality):
     gene_ids = make_mini_quant_df(quant_df, modality, cell_ids)
     if modality in ["atac", "rna"]:
         make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
-
-
