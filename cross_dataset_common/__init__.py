@@ -215,12 +215,13 @@ def get_pval_dfs(adata: anndata.AnnData, modality:str, adj:bool=False)->List[pd.
 
             names_and_pvals = zip(gene_names, pvals)
 
-            dataset_name = 'all_' + modality
+            pval_dict_list.extend([{group_descriptor: group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
 
-            if grouping == 'organ':
-                pval_dict_list.extend([{group_descriptor: group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
-            elif grouping == 'leiden':
-                pval_dict_list.extend([{group_descriptor: group_id, 'dataset': dataset_name, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+        dataset_name = 'all_' + modality
+
+        if grouping == 'leiden':
+            for pval_dict in pval_dict_list:
+                pval_dict['dataset'] = dataset_name
 
         data_frames.append(pd.DataFrame(pval_dict_list))
 
@@ -271,7 +272,6 @@ def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
     genes = list(quant_df['q_var_id'].unique())[:1000]
 
     gene_filter = quant_df['q_var_id'].isin(genes)
-    print(gene_filter.value_counts())
 
     quant_df = quant_df[gene_filter]
 
@@ -296,7 +296,6 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
 def create_minimal_dataset(cell_df, quant_df, organ_df, cluster_df, modality):
 
     cell_ids = make_mini_cell_df(cell_df, modality)
-    print(cell_ids)
     gene_ids = make_mini_quant_df(quant_df, modality, cell_ids)
     if modality in ["atac", "rna"]:
         make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
