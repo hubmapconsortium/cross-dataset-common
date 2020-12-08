@@ -181,7 +181,7 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
                 yield filepath
 
 
-def get_pval_dfs(adata: anndata.AnnData, adj:bool=False, modality:str)->List[pd.DataFrame]:
+def get_pval_dfs(adata: anndata.AnnData, modality:str, adj:bool=False)->List[pd.DataFrame]:
 
     groupings_dict = {'tissue_type':'organ_name', 'leiden':'cluster'}
 
@@ -218,7 +218,7 @@ def get_pval_dfs(adata: anndata.AnnData, adj:bool=False, modality:str)->List[pd.
             if grouping == 'organ':
                 pval_dict_list.extend([{group_descriptor: group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
             elif grouping == 'leiden':
-                pval_dict_list.extend([{group_descriptor: group_id, 'dataset': 'all_rna', 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+                pval_dict_list.extend([{group_descriptor: group_id, 'dataset': 'all_' + modality, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
 
         data_frames.append(pd.DataFrame(pval_dict_list))
 
