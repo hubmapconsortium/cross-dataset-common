@@ -13,19 +13,11 @@ from scipy.sparse import coo_matrix
 
 def hash_cell_id(semantic_cell_ids: pd.Series):
     hash_list = [hashlib.sha256(semantic_cell_id.encode('UTF-8')).hexdigest() for semantic_cell_id in semantic_cell_ids]
-<<<<<<< HEAD
     return pd.Series(hash_list, index=semantic_cell_ids.index)
 
 def make_quant_df(adata: anndata.AnnData):
 
     adata.obs = adata.obs.set_index('cell_id', drop=False, inplace=False)
-=======
-    hash_list
-
-def make_quant_df(adata: anndata.AnnData):
-
-    adata.obs.index = adata.obs['cell_id']
->>>>>>> 7c6060b2dce0f933c08169e6793235c0066ea443
 
     genes = list(adata.var.index)
     cells = list(adata.obs.index)
