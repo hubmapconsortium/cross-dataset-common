@@ -215,10 +215,12 @@ def get_pval_dfs(adata: anndata.AnnData, modality:str, adj:bool=False)->List[pd.
 
             names_and_pvals = zip(gene_names, pvals)
 
+            dataset_name = 'all_' + modality
+
             if grouping == 'organ':
                 pval_dict_list.extend([{group_descriptor: group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
             elif grouping == 'leiden':
-                pval_dict_list.extend([{group_descriptor: group_id, 'dataset': 'all_' + modality, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+                pval_dict_list.extend([{group_descriptor: group_id, 'dataset': dataset_name, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
 
         data_frames.append(pd.DataFrame(pval_dict_list))
 
