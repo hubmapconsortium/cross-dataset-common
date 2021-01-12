@@ -262,7 +262,7 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 
     new_file = "mini_" + modality + ".hdf5"
     with pd.HDFStore(new_file) as store:
-        store.put("cell", mini_cell_df)
+        store.put("cell", mini_cell_df, format='t')
     return cell_ids
 
 
