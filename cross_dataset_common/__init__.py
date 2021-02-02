@@ -271,11 +271,10 @@ def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
     csv_file = modality + '.csv'
     quant_df = quant_df[quant_df['q_cell_id'].isin(cell_ids)]
 
-    genes = list(quant_df['q_var_id'].unique())[:1000]
-
-    gene_filter = quant_df['q_var_id'].isin(genes)
-
-    quant_df = quant_df[gene_filter]
+    if modality in ['rna', 'atac']:
+        genes = list(quant_df['q_var_id'].unique())[:1000]
+        gene_filter = quant_df['q_var_id'].isin(genes)
+        quant_df = quant_df[gene_filter]
 
     quant_df.to_csv('mini_' + csv_file)
 
@@ -295,7 +294,7 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
     return
 
 
-def create_minimal_dataset(cell_df, quant_df, organ_df, cluster_df, modality):
+def create_minimal_dataset(cell_df, quant_df, organ_df=None, cluster_df=None, modality=None):
 
     cell_ids = make_mini_cell_df(cell_df, modality)
     gene_ids = make_mini_quant_df(quant_df, modality, cell_ids)
