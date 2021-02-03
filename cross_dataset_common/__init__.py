@@ -271,6 +271,8 @@ def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
     csv_file = modality + '.csv'
     quant_df = quant_df[quant_df['q_cell_id'].isin(cell_ids)]
 
+    genes = []
+
     if modality in ['rna', 'atac']:
         genes = list(quant_df['q_var_id'].unique())[:1000]
         gene_filter = quant_df['q_var_id'].isin(genes)
