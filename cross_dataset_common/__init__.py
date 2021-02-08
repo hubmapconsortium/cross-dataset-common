@@ -67,7 +67,67 @@ def get_zero_cells(quant_df:pd.DataFrame):
 
     return zero_cells
 
-def get_tissue_type(dataset: str, token: str) -> str:
+
+def get_dataset_uuids(modality: str, token: str = None) -> List[str]:
+    hits = []
+    for i in range(50):
+        dataset_query_dict = {
+            "from": 10 * i,
+            "size": 10,
+            "query": {
+                "bool": {
+                    "must": [],
+                    "filter": [
+                        {
+                            "match_all": {}
+                        },
+                        {
+                            "exists": {
+                                "field": "files.rel_path"
+                            }
+                        },
+                        {
+                            "match_phrase": {
+                                "immediate_ancestors.entity_type": {
+                                    "query": "Dataset"
+                                }
+                            }
+                        },
+                    ],
+                    "should": [],
+                    "must_not": [
+                        {
+                            "match_phrase": {
+                                "status": {
+                                    "query": "Error"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        if token is not None:
+            dataset_response = requests.post(
+                'https://search.api.hubmapconsortium.org/search',
+                json=dataset_query_dict, headers={'Authorization': 'Bearer ' + token})
+        else:
+            dataset_response = requests.post(
+                'https://search.api.hubmapconsortium.org/search',
+                json=dataset_query_dict)
+        hits.extend(dataset_response.json()['hits']['hits'])
+
+    uuids = []
+    for hit in hits:
+        for ancestor in hit['_source']['ancestors']:
+            if 'data_types' in ancestor.keys():
+                if modality in ancestor['data_types'][0] and 'bulk' not in ancestor['data_types'][0]:
+                    uuids.append(hit['_source']['uuid'])
+
+    return uuids
+
+def get_tissue_type(dataset: str, token: str = None) -> str:
 
     print(dataset)
 
@@ -116,10 +176,16 @@ def get_tissue_type(dataset: str, token: str) -> str:
         }
     }
 
-    dataset_response = requests.post(
-        'https://search.api.hubmapconsortium.org/search',
-        json=dataset_query_dict,
-        headers={'Authorization': 'Bearer ' + token})
+    if token is not None:
+        dataset_response = requests.post(
+            'https://search.api.hubmapconsortium.org/search',
+            json=dataset_query_dict,
+            headers={'Authorization': 'Bearer ' + token})
+    else:
+        dataset_response = requests.post(
+            'https://search.api.hubmapconsortium.org/search',
+            json=dataset_query_dict)
+
     hits = dataset_response.json()['hits']['hits']
 
     for hit in hits:
