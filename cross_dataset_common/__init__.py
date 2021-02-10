@@ -327,8 +327,12 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
     cell_ids = mini_cell_df["cell_id"].to_list()
 
     new_file = "mini_" + modality + ".hdf5"
-    with pd.HDFStore(new_file) as store:
-        store.put("cell", mini_cell_df, format='t')
+    if modality == 'codex':
+        with pd.HDFStore(new_file) as store:
+            store.put("cell", mini_cell_df)
+    else:
+        with pd.HDFStore(new_file) as store:
+            store.put("cell", mini_cell_df, format='t')
     return cell_ids
 
 
