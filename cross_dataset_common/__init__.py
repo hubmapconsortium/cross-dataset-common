@@ -247,28 +247,21 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
                 yield filepath
 
 
-def get_pval_dfs(adata: anndata.AnnData, modality:str, adj:bool=False)->List[pd.DataFrame]:
+def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
 
-    groupings_dict = {'tissue_type':'organ_name', 'leiden':'cluster'}
+    groupings_list = ['organ', 'leiden']
 
     num_genes = len(adata.var_names)
 
     data_frames = []
 
-    for grouping in groupings_dict:
-
-        print(grouping)
-        print(adata.obs[grouping].unique())
+    for grouping in groupings_list:
 
         sc.tl.rank_genes_groups(adata, grouping, method='t-test', rankby_abs=True, n_genes=num_genes)
 
         cell_df = adata.obs.copy()
-        if 'cell_id' not in cell_df.columns:
-            cell_df['cell_id'] = cell_df.index
 
         pval_dict_list = []
-
-        group_descriptor = groupings_dict[grouping]
 
         for group_id in cell_df[grouping].unique():
 
@@ -281,13 +274,7 @@ def get_pval_dfs(adata: anndata.AnnData, modality:str, adj:bool=False)->List[pd.
 
             names_and_pvals = zip(gene_names, pvals)
 
-            pval_dict_list.extend([{group_descriptor: group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
-
-        dataset_name = 'all_' + modality
-
-        if grouping == 'leiden':
-            for pval_dict in pval_dict_list:
-                pval_dict['dataset'] = dataset_name
+            pval_dict_list.extend([{'grouping_name': group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
 
         data_frames.append(pd.DataFrame(pval_dict_list))
 
@@ -320,7 +307,6 @@ def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
     return pd.DataFrame(pval_dict_list)
 
 def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
-
     mini_cell_df = cell_df.head(1000).copy()
     if "cell_id" not in mini_cell_df.columns:
         mini_cell_df["cell_id"] = mini_cell_df.index
