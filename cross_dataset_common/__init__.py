@@ -348,6 +348,8 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
         pval_df = pval_df.set_index("gene_id", drop=False)
         filtered_pval_df = pval_df.loc[gene_ids]
         print(len(pval_df["grouping_name"].unique()))
+        if keys['i'] == 'cluster':
+            filtered_pval_df = filtered_pval_df.reset_index(inplace=False)
 
         with pd.HDFStore(new_file) as store:
             store.put(keys[i], filtered_pval_df)
