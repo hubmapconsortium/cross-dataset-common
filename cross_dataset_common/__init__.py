@@ -349,8 +349,7 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
         filtered_pval_df = pval_df.loc[gene_ids]
         print(len(pval_df["grouping_name"].unique()))
 
-        with pd.HDFStore(new_file) as store:
-            store.put(keys[i], filtered_pval_df.copy())
+        filtered_pval_df.to_hdf(new_file, keys[i])
 
     return
 
