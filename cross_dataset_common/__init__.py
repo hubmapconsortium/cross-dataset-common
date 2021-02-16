@@ -302,7 +302,7 @@ def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
 
         group_id = dataset + '-' + str(group_id)
 
-        pval_dict_list.extend([{'cluster': group_id, 'dataset':dataset, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+        pval_dict_list.extend([{'grouping_name': group_id, 'dataset':dataset, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
 
     return pd.DataFrame(pval_dict_list)
 
