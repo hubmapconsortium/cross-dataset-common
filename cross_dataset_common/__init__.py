@@ -345,10 +345,9 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
     for i, pval_df in enumerate(pval_dfs):
         print(keys[i])
         print(pval_df.columns)
-        print(pval_df["grouping_name"].unique())
         pval_df = pval_df.set_index("gene_id", drop=False)
         filtered_pval_df = pval_df.loc[gene_ids]
-        print(pval_df["grouping_name"].unique())
+        print(len(pval_df["grouping_name"].unique()))
 
         with pd.HDFStore(new_file) as store:
             store.put(keys[i], filtered_pval_df)
