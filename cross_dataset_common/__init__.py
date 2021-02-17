@@ -344,11 +344,10 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
 
     for i, pval_df in enumerate(pval_dfs):
         dict_list = pval_df.to_dict(orient='records')
-        dict_list = [record for record in dict_list if record['gene_id'] in gene_ids]
-        pval_df = pd.DataFrame(dict_list)
         print(keys[i])
         print(len(pval_df["grouping_name"].unique()))
-        filtered_pval_df = pval_df[pval_df['gene_id'].isin(gene_ids)]
+        dict_list = [record for record in dict_list if record['gene_id'] in gene_ids]
+        filtered_pval_df = pd.DataFrame(dict_list)
         print(len(filtered_pval_df["grouping_name"].unique()))
 
         filtered_pval_df.to_hdf(new_file, keys[i])
