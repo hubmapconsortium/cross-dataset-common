@@ -344,6 +344,7 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
 
     for i, pval_df in enumerate(pval_dfs):
         dict_list = pval_df.to_dict(orient='records')
+        dict_list = [record for record in dict_list if record['gene_id'] in gene_ids]
         pval_df = pd.DataFrame(dict_list)
         print(keys[i])
         print(len(pval_df["grouping_name"].unique()))
