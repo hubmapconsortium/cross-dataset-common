@@ -343,6 +343,7 @@ def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
     new_file = "mini_" + modality + ".hdf5"
 
     for i, pval_df in enumerate(pval_dfs):
+        pval_df = pval_df.reset_index(inplace=False)
         print(keys[i])
         print(pval_df.index)
         print(len(pval_df["grouping_name"].unique()))
