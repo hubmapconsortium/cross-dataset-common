@@ -257,11 +257,15 @@ def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
 
     for grouping in groupings_list:
 
+        print(grouping)
+
         sc.tl.rank_genes_groups(adata, grouping, method='t-test', rankby_abs=True, n_genes=num_genes)
 
         cell_df = adata.obs.copy()
 
         pval_dict_list = []
+
+        print(len(cell_df['grouping'].unique()))
 
         for group_id in cell_df[grouping].unique():
 
@@ -279,7 +283,7 @@ def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
         data_frames.append(pd.DataFrame(pval_dict_list))
 
     for df in data_frames:
-        print(df.columns)
+        print(len(df['grouping_name'].unique()))
 
     return data_frames
 
@@ -307,7 +311,7 @@ def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
     return pd.DataFrame(pval_dict_list)
 
 def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
-    mini_cell_df = cell_df.head(1000).copy()
+    mini_cell_df = cell_df.head(10).copy()
     if "cell_id" not in mini_cell_df.columns:
         mini_cell_df["cell_id"] = mini_cell_df.index
     cell_ids = mini_cell_df["cell_id"].to_list()
@@ -324,13 +328,15 @@ def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
 
 def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
 
+    print(f"Length of quant_df index: ")
+
     csv_file = modality + '.csv'
     quant_df = quant_df[quant_df['q_cell_id'].isin(cell_ids)]
 
     genes = []
 
     if modality in ['rna', 'atac']:
-        genes = list(quant_df['q_var_id'].unique())[:1000]
+        genes = list(quant_df['q_var_id'].unique())[:10]
         gene_filter = quant_df['q_var_id'].isin(genes)
         quant_df = quant_df[gene_filter]
 
