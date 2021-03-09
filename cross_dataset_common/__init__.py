@@ -379,6 +379,6 @@ def tar_zip_scp(modality:str, known_hosts_file:Path):
     subprocess.run(tar_command, check=True)
     for host in hosts:
         scp_command = f"scp {modality}.tar.gz hive@{host}:~"
-        subprocess.run(scp_command)
+        subprocess.run(scp_command, check=True)
 
     return
