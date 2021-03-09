@@ -4,12 +4,13 @@ import anndata
 import pandas as pd
 from typing import List, Dict, Iterable
 from pathlib import Path
-from os import walk
+from os import walk, fspath
 import scanpy as sc
 import numpy as np
 import concurrent.futures
 import hashlib
 from scipy.sparse import coo_matrix
+import subprocess
 
 def hash_cell_id(semantic_cell_ids: pd.Series):
     hash_list = [hashlib.sha256(semantic_cell_id.encode('UTF-8')).hexdigest() for semantic_cell_id in semantic_cell_ids]
@@ -368,3 +369,16 @@ def create_minimal_dataset(cell_df, quant_df, organ_df=None, cluster_df=None, mo
     gene_ids = make_mini_quant_df(quant_df, modality, cell_ids)
     if modality in ["atac", "rna"]:
         make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
+
+
+def tar_zip_scp(modality:str, known_hosts_file:Path):
+    copy_command = f"cp {fspath(known_hosts_file)} /root/.ssh"
+    subprocess.run(copy_command, check=True)
+    hosts = ["cells.test.hubmapconsortium.org", "cells.dev.hubmapconsortium.org", "3.236.187.179"]
+    tar_command = f"tar -cvzf {modality}.tar.gz {modality}.csv mini_{modality}.csv {modality}.hdf5 mini_{modality}.hdf5"
+    subprocess.run(tar_command, check=True)
+    for host in hosts:
+        scp_command = f"scp {modality}.tar.gz hive@{host}:~"
+        subprocess.run(scp_command)
+
+    return
