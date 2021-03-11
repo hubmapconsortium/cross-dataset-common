@@ -374,8 +374,8 @@ def tar_zip_scp(modality:str, path_to_key:Path):
     subprocess.run(copy_command, shell=True, check=True)
     chmod_command = f"chmod 600 {new_key_path}"
     subprocess.run(chmod_command, shell=True, check=True)
-    chown_command = f"chown root {new_key_path}"
-    subprocess.run(chown_command, shell=True, check=True)
+#    chown_command = f"chown root {new_key_path}"
+#    subprocess.run(chown_command, shell=True, check=True)
 
     hosts = ["cells.test.hubmapconsortium.org", "cells.dev.hubmapconsortium.org", "3.236.187.179"]
     tar_command = f"tar -cvzf {modality}.tar.gz {modality}.csv mini_{modality}.csv {modality}.hdf5 mini_{modality}.hdf5"
