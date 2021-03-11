@@ -258,15 +258,11 @@ def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
 
     for grouping in groupings_list:
 
-        print(grouping)
-
         sc.tl.rank_genes_groups(adata, grouping, method='t-test', rankby_abs=True, n_genes=num_genes)
 
         cell_df = adata.obs.copy()
 
         pval_dict_list = []
-
-        print(len(cell_df['grouping'].unique()))
 
         for group_id in cell_df[grouping].unique():
 
