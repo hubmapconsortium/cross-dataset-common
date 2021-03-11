@@ -368,8 +368,8 @@ def create_minimal_dataset(cell_df, quant_df, organ_df=None, cluster_df=None, mo
 
 
 def tar_zip_scp(modality:str, known_hosts_file:Path):
-    copy_command = f"cp {fspath(known_hosts_file)} /root/.ssh/known_hosts"
-    subprocess.run(copy_command, check=True, shell=True)
+#    copy_command = f"cp {fspath(known_hosts_file)} /root/.ssh/known_hosts"
+#    subprocess.run(copy_command, check=True, shell=True)
     hosts = ["cells.test.hubmapconsortium.org", "cells.dev.hubmapconsortium.org", "3.236.187.179"]
     tar_command = f"tar -cvzf {modality}.tar.gz {modality}.csv mini_{modality}.csv {modality}.hdf5 mini_{modality}.hdf5"
     subprocess.run(tar_command, check=True, shell=True)
