@@ -370,8 +370,8 @@ def create_minimal_dataset(cell_df, quant_df, organ_df=None, cluster_df=None, mo
 def tar_zip_scp(modality:str, path_to_key:Path):
 
     working_directory = subprocess.run(f"echo $PWD", shell=True, capture_output=True)
-    print(working_directory)
-    print(str(working_directory))
+    print(working_directory.stdout)
+    print(str(working_directory.stdout))
     new_key_path = f"{str(working_directory)}/private_key"
     copy_command = f"cp {fspath(path_to_key)} {new_key_path}"
     subprocess.run(copy_command, shell=True, check=True)
@@ -380,7 +380,7 @@ def tar_zip_scp(modality:str, path_to_key:Path):
     chown_command = f"chown root {new_key_path}"
 
     output = subprocess.run(chown_command, shell=True, capture_output=True)
-    print(output)
+    print(output.stderr)
 
     #subprocess.run(chown_command, shell=True, check=True)
 
