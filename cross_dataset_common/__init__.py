@@ -378,6 +378,9 @@ def tar_zip_scp(modality:str, path_to_key:Path):
     subprocess.run(tar_command, check=True, shell=True)
     for host in hosts:
         scp_command = f"scp -i {new_key_path} {modality}.tar.gz hive@{host}:~"
-        subprocess.run(scp_command, check=True, shell=True)
+        err_output = subprocess.run(scp_command, shell=True, capture_output=True).stderr.decode('UTF-8')
+        print(err_output)
+        output = subprocess.run(scp_command, shell=True, capture_output=True).stdout.decode('UTF-8')
+        print(output)
 
     return
