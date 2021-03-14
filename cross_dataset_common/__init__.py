@@ -366,21 +366,3 @@ def create_minimal_dataset(cell_df, quant_df, organ_df=None, cluster_df=None, mo
     if modality in ["atac", "rna"]:
         make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
 
-
-def tar_zip_scp(modality:str, path_to_key:Path):
-
-    new_key_path = "private_key"
-    copy_command = f"cp {fspath(path_to_key)} {new_key_path}"
-    subprocess.run(copy_command, shell=True, check=True)
-
-    hosts = ["cells.test.hubmapconsortium.org", "cells.dev.hubmapconsortium.org", "3.236.187.179"]
-    tar_command = f"tar -cvzf {modality}.tar.gz {modality}.csv mini_{modality}.csv {modality}.hdf5 mini_{modality}.hdf5"
-    subprocess.run(tar_command, check=True, shell=True)
-    for host in hosts:
-        scp_command = f"scp -v -i {new_key_path} {modality}.tar.gz hive@{host}:~"
-        err_output = subprocess.run(scp_command, shell=True, capture_output=True).stderr.decode('UTF-8')
-        print(err_output)
-        output = subprocess.run(scp_command, shell=True, capture_output=True).stdout.decode('UTF-8')
-        print(output)
-
-    return
