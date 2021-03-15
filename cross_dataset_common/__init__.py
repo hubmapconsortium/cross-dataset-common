@@ -376,13 +376,19 @@ def delete_data_from_servers(modality):
         request_url = server + "delete/"
         requests.post(request_url, request_dict)
 
+def make_post_request(params_tuple):
+    server = params_tuple[0]
+    request_dict = params_tuple[1]
+    request_url = server + "insert/"
+    requests.post(request_url, request_dict)
+
 def add_data_to_server(kwargs_list, model_name):
     for i in range(len(kwargs_list) // CHUNK_SIZE + 1):
         kwargs_subset = kwargs_list[i * CHUNK_SIZE:(i+1)*CHUNK_SIZE]
         request_dict = {"model_name":model_name, "kwargs_list":kwargs_subset}
-        for server in SERVERS:#parallelize this
-            request_url = server + "insert/"
-            requests.post(request_url, request_dict)
+        params_tuples = [(server, request_dict) for server in SERVERS]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(params_tuples)) as e:
+            e.map(make_post_request, params_tuples)
 
 def create_modality(modality):
     add_data_to_server([{"modality_name":modality}], "modality")
@@ -458,9 +464,10 @@ def load_data_to_vms(modality, cell_df, quant_df, organ_df = None, cluster_df = 
         create_proteins(quant_df)
 
     #Do things up to here first because later things depend on them
-    create_cells(cell_df)
-    create_quants(quant_df, modality)
-    if modality in ["rna", "atac"]:
-        create_pvals(organ_df)
-        create_pvals(cluster_df)
-    set_up_relationships(cell_df, clusters)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as e:
+        e.submit(create_cells, cell_df)
+        e.submit(create_quants, quant_df, modality)
+        if modality in ["rna", "atac"]:
+            e.submit(create_pvals, organ_df)
+            e.submit(create_pvals,cluster_df)
+        e.submit(set_up_relationships, cell_df, clusters)
