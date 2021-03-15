@@ -12,6 +12,9 @@ import hashlib
 from scipy.sparse import coo_matrix
 import subprocess
 
+SERVERS = ["https://cells.test.hubmapconsortium.org/api/", "https://cells.dev.hubmapconsortium.org/api/", "3.236.187.179/api/"]
+CHUNK_SIZE = 1000
+
 def hash_cell_id(semantic_cell_ids: pd.Series):
     hash_list = [hashlib.sha256(semantic_cell_id.encode('UTF-8')).hexdigest() for semantic_cell_id in semantic_cell_ids]
     return pd.Series(hash_list, index=semantic_cell_ids.index)
@@ -366,3 +369,98 @@ def create_minimal_dataset(cell_df, quant_df, organ_df=None, cluster_df=None, mo
     if modality in ["atac", "rna"]:
         make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
 
+
+def delete_data_from_servers(modality):
+    request_dict = {"modality":modality}
+    for server in SERVERS:
+        request_url = server + "delete/"
+        requests.post(request_url, request_dict)
+
+def add_data_to_server(kwargs_list, model_name):
+    for i in range(len(kwargs_list) // CHUNK_SIZE + 1):
+        kwargs_subset = kwargs_list[i * CHUNK_SIZE:(i+1)*CHUNK_SIZE]
+        request_dict = {"model_name":model_name, "kwargs_list":kwargs_subset}
+        for server in SERVERS:#parallelize this
+            request_url = server + "insert/"
+            requests.post(request_url, request_dict)
+
+def create_modality(modality):
+    add_data_to_server([{"modality_name":modality}], "modality")
+
+def create_datasets(datasets_list, modality):
+    kwargs_list = [{"modality":modality, "uuid":dataset} for dataset in datasets_list]
+    add_data_to_server(kwargs_list, "dataset")
+
+def create_organs(cell_df):
+    organs_list = list(cell_df["organ"].unique())
+    kwargs_list = [{"grouping_name":organ} for organ in organs_list]
+    add_data_to_server(kwargs_list, "organ")
+
+def create_clusters(cell_df):
+    clusters_set = {}
+    unique_cluster_lists = [string.split(",") for string in cell_df["clusters"].unique()]
+    for cluster_list in unique_cluster_lists:
+        for cluster in cluster_list:
+            clusters_set.add(cluster)
+
+    cluster_splits = [cluster.split("-") for cluster in clusters_set]
+    kwargs_list = [{"cluster_method":cs[0], "cluster_data":cs[1], "dataset":cs[2], "grouping_name":"-".join(cs)}
+                   for cs in cluster_splits]
+    add_data_to_server(kwargs_list, "cluster")
+
+    return list(clusters_set)
+
+def create_genes(quant_df):
+    gene_symbols = list(quant_df["q_var_id"].unique())
+    kwargs_list = [{"gene_symbol":gene_symbol} for gene_symbol in gene_symbols]
+    add_data_to_server(kwargs_list, "gene")
+
+def create_proteins(quant_df):
+    protein_ids = list(quant_df["q_var_id"].unique())
+    kwargs_list = [{"protein_id":protein_id} for protein_id in protein_ids]
+    add_data_to_server(kwargs_list, "protein")
+
+def create_cells(cell_df):
+    cell_df = cell_df[["cell_id", "modality", "dataset", "organ"]]
+    kwargs_list = cell_df.to_dict("records")
+    add_data_to_server(kwargs_list, "cell")
+
+def create_quants(quant_df, modality):
+    model_name = modality + "quant"
+    kwargs_list = quant_df.to_dict("records")
+    add_data_to_server(kwargs_list, model_name)
+
+def create_pvals(grouping_df):
+    kwargs_list = grouping_df.to_dict("records")
+    add_data_to_server(kwargs_list, "pvalue")
+
+def set_up_relationships(cell_df, clusters):
+    cell_clusters_dict = {}
+    for cluster in clusters:
+        cell_clusters_dict[cluster] = []
+        for i in cell_df.index:
+            if cluster in cell_df.at[i, "clusters"].split(","):
+                cell_clusters_dict[cluster].append(cell_df.at[i, "cell_id"])
+
+    for server in SERVERS:
+        request_url = server + "setuprelationships/"
+        requests.post(request_url, cell_clusters_dict)
+
+def load_data_to_vms(modality, cell_df, quant_df, organ_df = None, cluster_df = None):
+    delete_data_from_servers(modality)
+    datasets_list = list(cell_df["dataset"].unique())
+    create_datasets(datasets_list, modality)
+    clusters = create_clusters(cell_df)
+    create_organs(cell_df)
+    if modality in ["rna", "atac"]:
+        create_genes(quant_df)
+    elif modality in ["codex"]:
+        create_proteins(quant_df)
+
+    #Do things up to here first because later things depend on them
+    create_cells(cell_df)
+    create_quants(quant_df, modality)
+    if modality in ["rna", "atac"]:
+        create_pvals(organ_df)
+        create_pvals(cluster_df)
+    set_up_relationships(cell_df, clusters)
