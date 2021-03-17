@@ -7,7 +7,7 @@ from pathlib import Path
 from os import walk, fspath
 import scanpy as sc
 import numpy as np
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 from scipy.sparse import coo_matrix
 import subprocess
@@ -369,25 +369,35 @@ def create_minimal_dataset(cell_df, quant_df, organ_df=None, cluster_df=None, mo
     if modality in ["atac", "rna"]:
         make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
 
-
 def delete_data_from_servers(modality):
     request_dict = {"modality":modality}
     for server in SERVERS:
         request_url = server + "delete/"
-        requests.post(request_url, request_dict)
+        response = requests.post(request_url, request_dict).json()
+        if "error" in response.keys():
+            print(response['error'])
+        else:
+            print(response['message'])
+            print(response['time'])
 
 def make_post_request(params_tuple):
     server = params_tuple[0]
     request_dict = params_tuple[1]
     request_url = server + "insert/"
-    requests.post(request_url, request_dict)
+    response = requests.post(request_url, request_dict).json()
+    if "error" in response.keys():
+        print(response['error'])
+    else:
+        print(response['message'])
+        print(response['time'])
 
 def add_data_to_server(kwargs_list, model_name):
     for i in range(len(kwargs_list) // CHUNK_SIZE + 1):
+        print(f"Sending chunk {i} of {len(kwargs_list) // CHUNK_SIZE}")
         kwargs_subset = kwargs_list[i * CHUNK_SIZE:(i+1)*CHUNK_SIZE]
-        request_dict = {"model_name":model_name, "kwargs_list":kwargs_subset}
+        request_dict = {"model_name":model_name, "kwargs_list":json.dumps(kwargs_subset)}
         params_tuples = [(server, request_dict) for server in SERVERS]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(params_tuples)) as e:
+        with ThreadPoolExecutor(max_workers=len(params_tuples)) as e:
             e.map(make_post_request, params_tuples)
 
 def create_modality(modality):
@@ -403,13 +413,16 @@ def create_organs(cell_df):
     add_data_to_server(kwargs_list, "organ")
 
 def create_clusters(cell_df):
-    clusters_set = {}
+    clusters_set = set({})
     unique_cluster_lists = [string.split(",") for string in cell_df["clusters"].unique()]
     for cluster_list in unique_cluster_lists:
         for cluster in cluster_list:
             clusters_set.add(cluster)
 
     cluster_splits = [cluster.split("-") for cluster in clusters_set]
+    for cluster_split in cluster_splits:
+        if len(cluster_split) < 4:
+            print(cluster_split)
     kwargs_list = [{"cluster_method":cs[0], "cluster_data":cs[1], "dataset":cs[2], "grouping_name":"-".join(cs)}
                    for cs in cluster_splits]
     add_data_to_server(kwargs_list, "cluster")
@@ -436,8 +449,10 @@ def create_quants(quant_df, modality):
     kwargs_list = quant_df.to_dict("records")
     add_data_to_server(kwargs_list, model_name)
 
-def create_pvals(grouping_df):
+def create_pvals(grouping_df, modality):
     kwargs_list = grouping_df.to_dict("records")
+    for kwargs in kwargs_list:
+        kwargs["modality"] = modality
     add_data_to_server(kwargs_list, "pvalue")
 
 def set_up_relationships(cell_df, clusters):
@@ -450,10 +465,16 @@ def set_up_relationships(cell_df, clusters):
 
     for server in SERVERS:
         request_url = server + "setuprelationships/"
-        requests.post(request_url, cell_clusters_dict)
+        response = requests.post(request_url, cell_clusters_dict).json()
+        if "error" in response.keys():
+            print(response['error'])
+        else:
+            print(response['message'])
+            print(response['time'])
 
 def load_data_to_vms(modality, cell_df, quant_df, organ_df = None, cluster_df = None):
     delete_data_from_servers(modality)
+    create_modality(modality)
     datasets_list = list(cell_df["dataset"].unique())
     create_datasets(datasets_list, modality)
     clusters = create_clusters(cell_df)
@@ -464,10 +485,10 @@ def load_data_to_vms(modality, cell_df, quant_df, organ_df = None, cluster_df = 
         create_proteins(quant_df)
 
     #Do things up to here first because later things depend on them
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as e:
+    with ThreadPoolExecutor(max_workers=5) as e:
         e.submit(create_cells, cell_df)
         e.submit(create_quants, quant_df, modality)
         if modality in ["rna", "atac"]:
-            e.submit(create_pvals, organ_df)
-            e.submit(create_pvals,cluster_df)
+            e.submit(create_pvals, organ_df, modality)
+            e.submit(create_pvals,cluster_df, modality)
         e.submit(set_up_relationships, cell_df, clusters)
