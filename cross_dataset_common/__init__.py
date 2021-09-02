@@ -14,6 +14,8 @@ import subprocess
 
 SERVERS = ["https://cells.test.hubmapconsortium.org/api/", "https://cells.dev.hubmapconsortium.org/api/", "3.236.187.179/api/"]
 CHUNK_SIZE = 1000
+modality_ranges_dict = {"rna": [0, 5], "atac": [-4, 1], "codex": [-1, 4]}
+min_percentages = [10 * i for i in range(0, 11)]
 
 def hash_cell_id(semantic_cell_ids: pd.Series):
     hash_list = [hashlib.sha256(semantic_cell_id.encode('UTF-8')).hexdigest() for semantic_cell_id in semantic_cell_ids]
@@ -492,3 +494,38 @@ def load_data_to_vms(modality, cell_df, quant_df, organ_df = None, cluster_df = 
             e.submit(create_pvals, organ_df, modality)
             e.submit(create_pvals,cluster_df, modality)
         e.submit(set_up_relationships, cell_df, clusters)
+
+def precompute_dataset_percentages(dataset_adata, modality):
+
+    kwargs_list = []
+    exponents = list(
+        range(modality_ranges_dict[modality][0], modality_ranges_dict[modality][1] + 1)
+    )
+
+    num_cells_in_dataset = len(dataset_adata.obs.index)
+    uuid = dataset_adata.obs['dataset'][0]
+
+    for var_id in dataset_adata.var.index:
+        zero = False
+        for exponent in exponents:
+            if zero:
+                percentage = 0.0
+            else:
+                cutoff = 10 ** exponent
+                subset_adata = dataset_adata[dataset_adata[var_id] > cutoff]
+                num_matching_cells = len(subset_adata.obs.index)
+                percentage = num_matching_cells / num_cells_in_dataset * 100.0
+                if percentage == 0.0:
+                    print("Hit a zero")
+                    zero = True
+
+            kwargs = {
+                "modality": modality,
+                "dataset": uuid,
+                "var_id": var_id,
+                "cutoff": cutoff,
+                "percentage": percentage,
+            }
+            kwargs_list.append(kwargs)
+
+    return pd.DataFrame(kwargs_list)
