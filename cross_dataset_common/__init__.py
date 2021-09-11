@@ -14,8 +14,8 @@ import subprocess
 
 SERVERS = ["https://cells.test.hubmapconsortium.org/api/", "https://cells.dev.hubmapconsortium.org/api/", "3.236.187.179/api/"]
 CHUNK_SIZE = 1000
-modality_ranges_dict = {"rna": [0, 5], "atac": [-4, 1], "codex": [-1, 4]}
-min_percentages = [10 * i for i in range(0, 11)]
+modality_ranges_dict = {"rna": [-5, 0], "atac": [-4, 1], "codex": [-1, 4]}
+min_percentages = [0, 1, 2, 5, 10]
 
 def hash_cell_id(semantic_cell_ids: pd.Series):
     hash_list = [hashlib.sha256(semantic_cell_id.encode('UTF-8')).hexdigest() for semantic_cell_id in semantic_cell_ids]
