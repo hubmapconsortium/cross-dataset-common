@@ -504,16 +504,17 @@ def precompute_dataset_percentages(dataset_adata, modality):
 
     num_cells_in_dataset = len(dataset_adata.obs.index)
     uuid = dataset_adata.obs['dataset'][0]
+    dataset_df = dataset_adata.to_df()
 
-    for var_id in dataset_adata.var.index:
+    for var_id in dataset_df.columns:
         zero = False
         for exponent in exponents:
             if zero:
                 percentage = 0.0
             else:
                 cutoff = 10 ** exponent
-                subset_adata = dataset_adata[dataset_adata[var_id] > cutoff]
-                num_matching_cells = len(subset_adata.obs.index)
+                subset_df = dataset_df[dataset_df[var_id] > cutoff]
+                num_matching_cells = len(subset_df.index)
                 percentage = num_matching_cells / num_cells_in_dataset * 100.0
                 if percentage == 0.0:
                     print("Hit a zero")
