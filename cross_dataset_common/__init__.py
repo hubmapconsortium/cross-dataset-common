@@ -495,15 +495,17 @@ def load_data_to_vms(modality, cell_df, quant_df, organ_df = None, cluster_df = 
             e.submit(create_pvals,cluster_df, modality)
         e.submit(set_up_relationships, cell_df, clusters)
 
-def precompute_dataset_percentages(dataset_adata, modality):
+def precompute_dataset_percentages(dataset_adata):
 
     kwargs_list = []
+    modality = list(dataset_adata.obs['modality'])[0]
+
     exponents = list(
         range(modality_ranges_dict[modality][0], modality_ranges_dict[modality][1] + 1)
     )
 
     num_cells_in_dataset = len(dataset_adata.obs.index)
-    uuid = dataset_adata.obs['dataset'][0]
+    uuid = list(dataset_adata.obs['dataset'])[0]
     dataset_df = dataset_adata.to_df()
 
     for var_id in dataset_df.columns:
