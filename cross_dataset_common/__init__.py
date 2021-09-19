@@ -495,40 +495,57 @@ def load_data_to_vms(modality, cell_df, quant_df, organ_df = None, cluster_df = 
             e.submit(create_pvals,cluster_df, modality)
         e.submit(set_up_relationships, cell_df, clusters)
 
-def precompute_dataset_percentages(dataset_adata):
-
-    kwargs_list = []
-    modality = list(dataset_adata.obs['modality'])[0]
+def precompute_gene(params_tuple):
+    dataset_df = params_tuple[0]
+    modality = params_tuple[1]
+    uuid = params_tuple[2]
+    var_id = params_tuple[3]
 
     exponents = list(
         range(modality_ranges_dict[modality][0], modality_ranges_dict[modality][1] + 1)
     )
 
-    num_cells_in_dataset = len(dataset_adata.obs.index)
+    num_cells_in_dataset = len(dataset_df.index)
+
+    kwargs_list = []
+
+    zero = False
+    for exponent in exponents:
+        if zero:
+            percentage = 0.0
+        else:
+            cutoff = 10 ** exponent
+            subset_df = dataset_df[dataset_df[var_id] > cutoff]
+            num_matching_cells = len(subset_df.index)
+            percentage = num_matching_cells / num_cells_in_dataset * 100.0
+            if percentage == 0.0:
+                print("Hit a zero")
+                zero = True
+
+        kwargs = {
+            "modality": modality,
+            "dataset": uuid,
+            "var_id": var_id,
+            "cutoff": cutoff,
+            "percentage": percentage,
+        }
+        kwargs_list.append(kwargs)
+
+    return kwargs_list
+
+def precompute_dataset_percentages(dataset_adata):
+
+    kwargs_list = []
+    modality = list(dataset_adata.obs['modality'])[0]
+
     uuid = list(dataset_adata.obs['dataset'])[0]
     dataset_df = dataset_adata.to_df()
 
-    for var_id in dataset_df.columns:
-        zero = False
-        for exponent in exponents:
-            if zero:
-                percentage = 0.0
-            else:
-                cutoff = 10 ** exponent
-                subset_df = dataset_df[dataset_df[var_id] > cutoff]
-                num_matching_cells = len(subset_df.index)
-                percentage = num_matching_cells / num_cells_in_dataset * 100.0
-                if percentage == 0.0:
-                    print("Hit a zero")
-                    zero = True
+    params_tuples = [(dataset_df, modality, uuid, var_id) for var_id in dataset_df.columns]
+    with ThreadPoolExecutor(max_workers=10) as e:
+        kwargs_lists = e.map(precompute_gene, params_tuples)
 
-            kwargs = {
-                "modality": modality,
-                "dataset": uuid,
-                "var_id": var_id,
-                "cutoff": cutoff,
-                "percentage": percentage,
-            }
-            kwargs_list.append(kwargs)
+    for kl in kwargs_lists:
+        kwargs_list.extend(kl)
 
     return pd.DataFrame(kwargs_list)
