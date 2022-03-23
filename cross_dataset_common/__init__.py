@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 import hashlib
 from scipy.sparse import coo_matrix
 import subprocess
+import json
 
 SERVERS = ["https://cells.test.hubmapconsortium.org/api/", "https://cells.dev.hubmapconsortium.org/api/", "3.236.187.179/api/"]
 CHUNK_SIZE = 1000
@@ -252,6 +253,63 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
             if filepath.match(pattern):
                 yield filepath
 
+def get_dataset_cluster_df(adata: anndata.Anndata)->pd.DataFrame:
+    num_genes = len(adata.var_names)
+
+    data_frames = []
+
+    for dataset in adata.obs["dataset"].unique():
+        print(dataset)
+
+        dataset_adata = adata[adata.obs["dataset"] == dataset]
+        sc.tl.rank_genes_groups(dataset_adata, "dataset_leiden", method='t-test', rankby_abs=True, n_genes=num_genes)
+
+        pval_dict_list = []
+
+        for group_id in adata.obs["dataset_leiden"].unique():
+
+            if type(group_id) == float and np.isnan(group_id):
+                continue
+
+            gene_names = adata.uns['rank_genes_groups']['names'][group_id]
+
+            pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
+
+            names_and_pvals = zip(gene_names, pvals)
+
+            pval_dict_list.extend([{'grouping_name': group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+
+        data_frames.append(pd.DataFrame(pval_dict_list))
+
+    df = pd.concat(data_frames)
+
+    return df
+
+def get_cell_type_df(adata: anndata.Anndata)->pd.DataFrame:
+    num_genes = len(adata.var_names)
+
+    adata = adata[adata.obs["cell_type"] != "unknown"]
+
+    sc.tl.rank_genes_groups(adata, "cell_type", method='t-test', rankby_abs=True, n_genes=num_genes)
+
+    pval_dict_list = []
+
+    for group_id in adata.obs["cell_type"].unique():
+
+        if type(group_id) == float and np.isnan(group_id):
+            continue
+
+        gene_names = adata.uns['rank_genes_groups']['names'][group_id]
+
+        pvals = adata.uns['rank_genes_groups']['pvals_adj'][group_id]
+
+        names_and_pvals = zip(gene_names, pvals)
+
+        pval_dict_list.extend([{'grouping_name': group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+
+    df = pd.DataFrame(pval_dict_list)
+
+    return df
 
 def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
 
@@ -286,6 +344,11 @@ def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
 
     for df in data_frames:
         print(len(df['grouping_name'].unique()))
+
+    if "cell_type" in adata.obs.columns and len(adata.obs["cell_type"]) > 1:
+        data_frames.append(get_cell_type_df(adata))
+    else:
+        data_frames.append(pd.DataFrame())
 
     return data_frames
 
@@ -371,130 +434,6 @@ def create_minimal_dataset(cell_df, quant_df, organ_df=None, cluster_df=None, mo
     if modality in ["atac", "rna"]:
         make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
 
-def delete_data_from_servers(modality):
-    request_dict = {"modality":modality}
-    for server in SERVERS:
-        request_url = server + "delete/"
-        response = requests.post(request_url, request_dict).json()
-        if "error" in response.keys():
-            print(response['error'])
-        else:
-            print(response['message'])
-            print(response['time'])
-
-def make_post_request(params_tuple):
-    server = params_tuple[0]
-    request_dict = params_tuple[1]
-    request_url = server + "insert/"
-    response = requests.post(request_url, request_dict).json()
-    if "error" in response.keys():
-        print(response['error'])
-    else:
-        print(response['message'])
-        print(response['time'])
-
-def add_data_to_server(kwargs_list, model_name):
-    for i in range(len(kwargs_list) // CHUNK_SIZE + 1):
-        print(f"Sending chunk {i} of {len(kwargs_list) // CHUNK_SIZE}")
-        kwargs_subset = kwargs_list[i * CHUNK_SIZE:(i+1)*CHUNK_SIZE]
-        request_dict = {"model_name":model_name, "kwargs_list":json.dumps(kwargs_subset)}
-        params_tuples = [(server, request_dict) for server in SERVERS]
-        with ThreadPoolExecutor(max_workers=len(params_tuples)) as e:
-            e.map(make_post_request, params_tuples)
-
-def create_modality(modality):
-    add_data_to_server([{"modality_name":modality}], "modality")
-
-def create_datasets(datasets_list, modality):
-    kwargs_list = [{"modality":modality, "uuid":dataset} for dataset in datasets_list]
-    add_data_to_server(kwargs_list, "dataset")
-
-def create_organs(cell_df):
-    organs_list = list(cell_df["organ"].unique())
-    kwargs_list = [{"grouping_name":organ} for organ in organs_list]
-    add_data_to_server(kwargs_list, "organ")
-
-def create_clusters(cell_df):
-    clusters_set = set({})
-    unique_cluster_lists = [string.split(",") for string in cell_df["clusters"].unique()]
-    for cluster_list in unique_cluster_lists:
-        for cluster in cluster_list:
-            clusters_set.add(cluster)
-
-    cluster_splits = [cluster.split("-") for cluster in clusters_set]
-    for cluster_split in cluster_splits:
-        if len(cluster_split) < 4:
-            print(cluster_split)
-    kwargs_list = [{"cluster_method":cs[0], "cluster_data":cs[1], "dataset":cs[2], "grouping_name":"-".join(cs)}
-                   for cs in cluster_splits]
-    add_data_to_server(kwargs_list, "cluster")
-
-    return list(clusters_set)
-
-def create_genes(quant_df):
-    gene_symbols = list(quant_df["q_var_id"].unique())
-    kwargs_list = [{"gene_symbol":gene_symbol} for gene_symbol in gene_symbols]
-    add_data_to_server(kwargs_list, "gene")
-
-def create_proteins(quant_df):
-    protein_ids = list(quant_df["q_var_id"].unique())
-    kwargs_list = [{"protein_id":protein_id} for protein_id in protein_ids]
-    add_data_to_server(kwargs_list, "protein")
-
-def create_cells(cell_df):
-    cell_df = cell_df[["cell_id", "modality", "dataset", "organ"]]
-    kwargs_list = cell_df.to_dict("records")
-    add_data_to_server(kwargs_list, "cell")
-
-def create_quants(quant_df, modality):
-    model_name = modality + "quant"
-    kwargs_list = quant_df.to_dict("records")
-    add_data_to_server(kwargs_list, model_name)
-
-def create_pvals(grouping_df, modality):
-    kwargs_list = grouping_df.to_dict("records")
-    for kwargs in kwargs_list:
-        kwargs["modality"] = modality
-    add_data_to_server(kwargs_list, "pvalue")
-
-def set_up_relationships(cell_df, clusters):
-    cell_clusters_dict = {}
-    for cluster in clusters:
-        cell_clusters_dict[cluster] = []
-        for i in cell_df.index:
-            if cluster in cell_df.at[i, "clusters"].split(","):
-                cell_clusters_dict[cluster].append(cell_df.at[i, "cell_id"])
-
-    for server in SERVERS:
-        request_url = server + "setuprelationships/"
-        response = requests.post(request_url, cell_clusters_dict).json()
-        if "error" in response.keys():
-            print(response['error'])
-        else:
-            print(response['message'])
-            print(response['time'])
-
-def load_data_to_vms(modality, cell_df, quant_df, organ_df = None, cluster_df = None):
-    delete_data_from_servers(modality)
-    create_modality(modality)
-    datasets_list = list(cell_df["dataset"].unique())
-    create_datasets(datasets_list, modality)
-    clusters = create_clusters(cell_df)
-    create_organs(cell_df)
-    if modality in ["rna", "atac"]:
-        create_genes(quant_df)
-    elif modality in ["codex"]:
-        create_proteins(quant_df)
-
-    #Do things up to here first because later things depend on them
-    with ThreadPoolExecutor(max_workers=5) as e:
-        e.submit(create_cells, cell_df)
-        e.submit(create_quants, quant_df, modality)
-        if modality in ["rna", "atac"]:
-            e.submit(create_pvals, organ_df, modality)
-            e.submit(create_pvals,cluster_df, modality)
-        e.submit(set_up_relationships, cell_df, clusters)
-
 def precompute_gene(params_tuple):
     dataset_df = params_tuple[0]
     modality = params_tuple[1]
@@ -549,3 +488,14 @@ def precompute_dataset_percentages(dataset_adata):
         kwargs_list.extend(kl)
 
     return pd.DataFrame(kwargs_list)
+
+def precompute_values_series(cell_df, adata):
+    values_series_dict = {}
+    #Parallelize this as highly as possible
+    for dataset in cell_df['dataset'].unique():
+        for var in adata.var.index:
+            cell_df_subset = cell_df[cell_df["dataset"] == dataset]
+            values_list = [json.dumps({'var':adata[cell,var]} for cell in cell_df_subset.index)]
+            values_series = pd.Series(values_list, index=cell_df_subset.index)
+            values_series_dict[f"{dataset}+{var}"] = values_series
+    return values_series_dict
