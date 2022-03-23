@@ -345,7 +345,7 @@ def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
     for df in data_frames:
         print(len(df['grouping_name'].unique()))
 
-    if "cell_type" in adata.obs.columns and len(adata.obs["cell_type"]) > 1:
+    if "cell_type" in adata.obs.columns and len(adata.obs["cell_type"].unique()) > 1:
         data_frames.append(get_cell_type_df(adata))
     else:
         data_frames.append(pd.DataFrame())
