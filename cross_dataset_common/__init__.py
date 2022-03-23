@@ -253,7 +253,7 @@ def find_files(directory: Path, pattern: str) -> Iterable[Path]:
             if filepath.match(pattern):
                 yield filepath
 
-def get_dataset_cluster_df(adata: anndata.Anndata)->pd.DataFrame:
+def get_dataset_cluster_df(adata: anndata.AnnData)->pd.DataFrame:
     num_genes = len(adata.var_names)
 
     data_frames = []
@@ -285,7 +285,7 @@ def get_dataset_cluster_df(adata: anndata.Anndata)->pd.DataFrame:
 
     return df
 
-def get_cell_type_df(adata: anndata.Anndata)->pd.DataFrame:
+def get_cell_type_df(adata: anndata.AnnData)->pd.DataFrame:
     num_genes = len(adata.var_names)
 
     adata = adata[adata.obs["cell_type"] != "unknown"]
