@@ -489,13 +489,34 @@ def precompute_dataset_percentages(dataset_adata):
 
     return pd.DataFrame(kwargs_list)
 
-def precompute_values_series(cell_df, adata):
+def precompute_dataset_values_series(dataset_df, dataset_adata):
+    param_tuples_list = [(dataset_df, dataset_adata, var) for var in adata.index]
+    with ThreadPoolExecutor(max_workers=20) as e:
+        values_series_dicts = e.map(precompute_dataset_single_values_series, param_tuples_list)
     values_series_dict = {}
-    #Parallelize this as highly as possible
-    for dataset in cell_df['dataset'].unique():
-        for var in adata.var.index:
-            cell_df_subset = cell_df[cell_df["dataset"] == dataset]
-            values_list = [json.dumps({'var':adata[cell,var]} for cell in cell_df_subset.index)]
-            values_series = pd.Series(values_list, index=cell_df_subset.index)
-            values_series_dict[f"{dataset}+{var}"] = values_series
+    for vsd in values_series_dicts:
+        values_series_dict.update(vsd)
+
+    return values_series_dict
+
+def precompute_dataset_single_values_series(cell_df_subset, dataset_adata, var):
+    values_series_dict = {}
+    values_list = [json.dumps({'var': dataset_adata[cell, var]} for cell in cell_df_subset.index)]
+    values_series = pd.Series(values_list, index=cell_df_subset.index)
+    values_series_dict[f"{dataset}+{var}"] = values_series
+    return values_series_dict
+
+def precompute_values_series(cell_df, adata):
+    dataset_dfs = [cell_df[cell_df["dataset"] == dataset] for dataset in cell_df["dataset"].unique()]
+    cell_ids_lists = [list(dataset_df["cell_id"].unique()) for dataset_df in dataset_dfs]
+    dataset_adatas = [adata[cell_id_list] for cell_id_list in cell_ids_lists]
+
+    param_tuples_list = [(dataset_dfs[i], dataset_adatas[i]) for i in range(len(dataset_dfs))]
+
+    with ThreadPoolExecutor(max_workers=10) as e:
+        values_series_dicts = e.map(precompute_dataset_values_series, param_tuples_list)
+    values_series_dict = {}
+    for vsd in values_series_dicts:
+        values_series_dict.update(vsd)
+
     return values_series_dict
