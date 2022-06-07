@@ -520,3 +520,12 @@ def precompute_values_series(cell_df, adata):
         values_series_dict.update(vsd)
 
     return values_series_dict
+
+def make_minimal_adata(adata):
+
+    X = csr_matrix(adata.X)
+    obs = pd.DataFrame(index=adata.obs["cell_id"])
+    var = pd.DataFrame(index=adata.var.index)
+
+    min_adata = anndata.AnnData(X=X, obs=obs, var=var)
+    min_adata.write_h5ad("rna.h5ad")
