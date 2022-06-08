@@ -12,6 +12,8 @@ import hashlib
 from scipy.sparse import coo_matrix
 import subprocess
 import json
+import awswrangler as wr
+import boto3
 
 SERVERS = ["https://cells.test.hubmapconsortium.org/api/", "https://cells.dev.hubmapconsortium.org/api/", "3.236.187.179/api/"]
 CHUNK_SIZE = 1000
@@ -22,128 +24,7 @@ def hash_cell_id(semantic_cell_ids: pd.Series):
     hash_list = [hashlib.sha256(semantic_cell_id.encode('UTF-8')).hexdigest() for semantic_cell_id in semantic_cell_ids]
     return pd.Series(hash_list, index=semantic_cell_ids.index)
 
-def make_quant_df(adata: anndata.AnnData):
-
-    adata.obs = adata.obs.set_index('cell_id', drop=False, inplace=False)
-
-    genes = list(adata.var.index)
-    cells = list(adata.obs.index)
-    coo = coo_matrix(adata.X)
-
-    triples = [(coo.row[i], coo.col[i], coo.data[i]) for i in range(len(coo.row))]
-
-    dict_list = [{'q_cell_id':cells[row], 'q_var_id':genes[col], 'value':val} for row, col, val in triples]
-    quant_df = pd.DataFrame(dict_list)
-    return quant_df
-
-def process_quant_column(quant_df_and_column):
-    quant_df = quant_df_and_column[0]
-    column = quant_df_and_column[1]
-
-    dict_list =  [{'cell_id': i, 'gene_id': column, 'value': quant_df.at[i, column]} for i in
-                 quant_df.index if quant_df.at[i, column] > 0.0]
-
-    return dict_list
-
-def get_zero_cells_column(quant_df_and_column):
-    quant_df = quant_df_and_column[0]
-    column = quant_df_and_column[1]
-
-    zero_cells = [i for i in quant_df.index if quant_df.at[i, column] > 0.0]
-
-    return zero_cells
-
-def flatten_quant_df(quant_df:pd.DataFrame):
-
-    dict_list = []
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
-
-        df_and_columns = [(quant_df, column) for column in quant_df.columns]
-
-        for column_list in executor.map(process_quant_column, df_and_columns):
-            dict_list.extend(column_list)
-
-    return pd.DataFrame(dict_list)
-
-def get_zero_cells(quant_df:pd.DataFrame):
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=64) as executor:
-        df_and_columns = [(quant_df, column) for column in quant_df.columns]
-        zero_cells = {column: cell_list for column, cell_list in zip(quant_df.columns, executor.map(get_zero_cells_column, df_and_columns))}
-
-    return zero_cells
-
-
-def get_dataset_uuids(modality: str, token: str = None) -> List[str]:
-    hits = []
-    for i in range(50):
-        dataset_query_dict = {
-            "from": 10 * i,
-            "size": 10,
-            "query": {
-                "bool": {
-                    "must": [],
-                    "filter": [
-                        {
-                            "match_all": {}
-                        },
-                        {
-                            "exists": {
-                                "field": "files.rel_path"
-                            }
-                        },
-                        {
-                            "match_phrase": {
-                                "immediate_ancestors.entity_type": {
-                                    "query": "Dataset"
-                                }
-                            }
-                        },
-                    ],
-                    "should": [],
-                    "must_not": [
-                        {
-                            "match_phrase": {
-                                "status": {
-                                    "query": "Error"
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-
-        if token is not None:
-            dataset_response = requests.post(
-                'https://search.api.hubmapconsortium.org/search',
-                json=dataset_query_dict, headers={'Authorization': 'Bearer ' + token})
-        else:
-            dataset_response = requests.post(
-                'https://search.api.hubmapconsortium.org/search',
-                json=dataset_query_dict)
-        hits.extend(dataset_response.json()['hits']['hits'])
-
-    uuids = []
-    for hit in hits:
-        for ancestor in hit['_source']['ancestors']:
-            if 'data_types' in ancestor.keys():
-                if modality in ancestor['data_types'][0] and 'bulk' not in ancestor['data_types'][0]:
-                    uuids.append(hit['_source']['uuid'])
-
-    return uuids
-
 def get_tissue_type(dataset: str, token: str = None) -> str:
-
-    print(dataset)
-
-    special_cases = {'ucsd-snareseq':'Kidney', 'caltech-sciseq':'Heart'}
-
-    #Hacky handling of datasets not yet exposed to search-api
-    if dataset in special_cases.keys():
-        return special_cases[dataset]
-
 
     organ_dict = yaml.load(open('/opt/organ_types.yaml'), Loader=yaml.BaseLoader)
 
@@ -373,67 +254,6 @@ def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
 
     return pd.DataFrame(pval_dict_list)
 
-def make_mini_cell_df(cell_df:pd.DataFrame, modality:str):
-    mini_cell_df = cell_df.head(10).copy()
-    if "cell_id" not in mini_cell_df.columns:
-        mini_cell_df["cell_id"] = mini_cell_df.index
-    cell_ids = mini_cell_df["cell_id"].to_list()
-
-    new_file = "mini_" + modality + ".hdf5"
-    if modality == 'codex':
-        with pd.HDFStore(new_file) as store:
-            store.put("cell", mini_cell_df)
-    else:
-        with pd.HDFStore(new_file) as store:
-            store.put("cell", mini_cell_df, format='t')
-    return cell_ids
-
-
-def make_mini_quant_df(quant_df:pd.DataFrame, modality:str, cell_ids):
-
-    print(f"Length of quant_df index: ")
-
-    csv_file = modality + '.csv'
-    quant_df = quant_df[quant_df['q_cell_id'].isin(cell_ids)]
-
-    genes = []
-
-    if modality in ['rna', 'atac']:
-        genes = list(quant_df['q_var_id'].unique())[:10]
-        gene_filter = quant_df['q_var_id'].isin(genes)
-        quant_df = quant_df[gene_filter]
-
-    quant_df.to_csv('mini_' + csv_file)
-
-    return genes
-
-
-def make_mini_pval_dfs(pval_dfs, keys, modality, gene_ids):
-    new_file = "mini_" + modality + ".hdf5"
-
-    for i, pval_df in enumerate(pval_dfs):
-        dict_list = pval_df.to_dict(orient='records')
-        print(keys[i])
-        print(len(pval_df.index))
-        print(len(pval_df["grouping_name"].unique()))
-        dict_list = [record for record in dict_list if record['gene_id'] in gene_ids]
-        grouping_name_set = set([record["grouping_name"] for record in dict_list])
-        print(len(grouping_name_set))
-        filtered_pval_df = pd.DataFrame(dict_list)
-        print(len(filtered_pval_df["grouping_name"].unique()))
-
-        filtered_pval_df.to_hdf(new_file, keys[i])
-
-    return
-
-
-def create_minimal_dataset(cell_df, quant_df, organ_df=None, cluster_df=None, modality=None):
-
-    cell_ids = make_mini_cell_df(cell_df, modality)
-    gene_ids = make_mini_quant_df(quant_df, modality, cell_ids)
-    if modality in ["atac", "rna"]:
-        make_mini_pval_dfs([organ_df, cluster_df],['organ', 'cluster'], modality, gene_ids)
-
 def precompute_gene(params_tuple):
     dataset_df = params_tuple[0]
     modality = params_tuple[1]
@@ -529,3 +349,17 @@ def make_minimal_adata(adata, modality):
 
     min_adata = anndata.AnnData(X=X, obs=obs, var=var)
     min_adata.write_h5ad(f"{modality}.h5ad")
+
+def upload_file_to_s3(path_to_file, boto_session):
+    remote_path = f"s3://cells-api-index-assets/{path_to_file.name}"
+    with open(local_path, "rb") as local_f:
+        wr.s3.upload(local_file=local_f, path=remote_path,
+                     boto3_session=boto_session)
+
+def upload_files_to_s3(paths_to_files, access_key_id, secret_access_key):
+    boto_session = boto3.Session(access_key_id, secret_access_key)
+    for path in paths_to_files:
+        upload_file_to_s3(path, boto_session)
+
+
+
