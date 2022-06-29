@@ -234,6 +234,7 @@ def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
     return data_frames
 
 def get_cluster_df(adata:anndata.AnnData, dataset)->pd.DataFrame:
+    num_genes = len(adata.var.index)
     cell_df = adata.obs.copy()
 #    dataset = cell_df['dataset'][0]
 
