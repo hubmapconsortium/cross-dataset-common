@@ -233,9 +233,9 @@ def get_pval_dfs(adata: anndata.AnnData)->List[pd.DataFrame]:
 
     return data_frames
 
-def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
+def get_cluster_df(adata:anndata.AnnData, dataset)->pd.DataFrame:
     cell_df = adata.obs.copy()
-    dataset = cell_df['dataset'][0]
+#    dataset = cell_df['dataset'][0]
 
     pval_dict_list = []
 
