@@ -239,6 +239,8 @@ def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
 
     pval_dict_list = []
 
+    sc.tl.rank_genes_groups(adata, 'leiden', method='t-test', rankby_abs=True, n_genes=num_genes)
+
     for group_id in cell_df['leiden'].unique():
 
         if type(group_id) == float and np.isnan(group_id):
@@ -250,7 +252,9 @@ def get_cluster_df(adata:anndata.AnnData)->pd.DataFrame:
 
         names_and_pvals = zip(gene_names, pvals)
 
-        pval_dict_list.extend([{'grouping_name': group_id, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
+        grouping_name = f"leiden-UMAP-{dataset}-{group_id}"
+
+        pval_dict_list.extend([{'grouping_name': grouping_name, 'gene_id': n_p[0], 'value': n_p[1]} for n_p in names_and_pvals])
 
     return pd.DataFrame(pval_dict_list)
 
@@ -362,4 +366,18 @@ def upload_files_to_s3(paths_to_files, access_key_id, secret_access_key):
         upload_file_to_s3(path, boto_session)
 
 
+def find_files(directory, patterns):
+    for dirpath_str, dirnames, filenames in walk(directory):
+        dirpath = Path(dirpath_str)
+        for filename in filenames:
+            filepath = dirpath / filename
+            for pattern in patterns:
+                if filepath.match(pattern):
+                    return filepath
 
+def find_file_pairs(directory):
+    filtered_patterns = ['cluster_marker_genes.h5ad', 'secondary_analysis.h5ad']
+    unfiltered_patterns = ['out.h5ad', 'expr.h5ad']
+    filtered_file = find_files(directory, filtered_patterns)
+    unfiltered_file = find_files(directory, unfiltered_patterns)
+    return filtered_file, unfiltered_file
