@@ -314,6 +314,13 @@ def precompute_dataset_percentages(dataset_adata):
 
     return pd.DataFrame(kwargs_list)
 
+
+def precompute_percentages(adata):
+    dataset_adatas = [adata[adata.obs["dataset"] == dataset] for dataset in adata.obs["dataset"].unique()]
+    with ThreadPoolExecutor(max_workers=50) as e:
+        dataset_dfs = e.map(precompute_dataset_percentages, dataset_adatas)
+    return pd.concat(dataset_dfs)
+
 def precompute_dataset_values_series(dataset_df, dataset_adata):
     param_tuples_list = [(dataset_df, dataset_adata, var) for var in adata.index]
     with ThreadPoolExecutor(max_workers=20) as e:
