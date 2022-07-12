@@ -303,7 +303,7 @@ def precompute_dataset_percentages(dataset_adata):
 
     uuid = dataset_adata.obs['dataset'].iloc[0]
 
-    params_tuples = [(dataset_adata[:,[var]], modality, uuid, var_id) for var_id in dataset_adata.var.index]
+    params_tuples = [(dataset_adata[:,[var_id]], modality, uuid, var_id) for var_id in dataset_adata.var.index]
     with ThreadPoolExecutor(max_workers=100) as e:
         kwargs_lists = e.map(precompute_gene, params_tuples)
 
