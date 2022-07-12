@@ -260,7 +260,7 @@ def get_cluster_df(adata:anndata.AnnData, dataset)->pd.DataFrame:
     return pd.DataFrame(pval_dict_list)
 
 def precompute_gene(params_tuple):
-    dataset_df = params_tuple[0]
+    dataset_var_adata = params_tuple[0]
     modality = params_tuple[1]
     uuid = params_tuple[2]
     var_id = params_tuple[3]
@@ -269,7 +269,7 @@ def precompute_gene(params_tuple):
         range(modality_ranges_dict[modality][0], modality_ranges_dict[modality][1] + 1)
     )
 
-    num_cells_in_dataset = len(dataset_df.index)
+    num_cells_in_dataset = len(dataset_var_adata.obs.index)
 
     kwargs_list = []
 
@@ -279,8 +279,8 @@ def precompute_gene(params_tuple):
         if zero:
             percentage = 0.0
         else:
-            subset_df = dataset_df[dataset_df[var_id] > cutoff]
-            num_matching_cells = len(subset_df.index)
+            subset_adata = dataset_var_adata[dataset_var_adata.X > cutoff]
+            num_matching_cells = len(subset_adata.obs.index)
             percentage = num_matching_cells / num_cells_in_dataset * 100.0
             if percentage == 0.0:
                 zero = True
@@ -302,16 +302,15 @@ def precompute_dataset_percentages(dataset_adata):
     modality = dataset_adata.obs['modality'].iloc[0]
 
     uuid = dataset_adata.obs['dataset'].iloc[0]
-    dataset_df = dataset_adata.to_df()
 
-    params_tuples = [(dataset_df, modality, uuid, var_id) for var_id in dataset_df.columns]
+    params_tuples = [(dataset_adata[:,[var]], modality, uuid, var_id) for var_id in dataset_adata.var.index]
     with ThreadPoolExecutor(max_workers=100) as e:
         kwargs_lists = e.map(precompute_gene, params_tuples)
 
     for kl in kwargs_lists:
         kwargs_list.extend(kl)
 
-    print("Uuid")
+    print(uuid)
 
     return pd.DataFrame(kwargs_list)
 
